@@ -43,23 +43,23 @@
 为了让程序正常工作，请务必保持以下目录结构：
 
 ```
-<2.assembler_py>/
-|-- src/
-|--|-- assembler.py   (Python汇编器脚本)
-|
-|-- data/
-|--|-- input.txt      (存放汇编指令)
-|--|-- output.txt     (保存生成的32位机器码)
-
-|-- material/
-|--|-- pngs/ (图片素材)
-|--|-- registers.md    (寄存器说明)
-|--|-- codes.md (指令说明)
-|--|-- 指令.ppt
-|
-|-- manual.md (使用说明)
-|-- Development_Log.md (开发日志)
-|-- README.md (本文件)
+<2.assembler_py>/  
+|-- src/  
+|--|-- assembler.py   (Python汇编器脚本)  
+|  
+|-- data/  
+|--|-- input.txt      (存放汇编指令)  
+|--|-- output.txt     (保存生成的32位机器码)  
+|  
+|-- material/  
+|--|-- pngs/ (图片素材)  
+|--|-- registers.md    (寄存器说明)  
+|--|-- codes.md (指令说明)  
+|--|-- 指令.ppt  
+|  
+|-- manual.md (使用说明)  
+|-- Development_Log.md (开发日志)  
+|-- README.md (本文件)  
 ```
 
 #### **4. 如何使用**
