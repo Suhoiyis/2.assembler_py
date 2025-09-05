@@ -1,0 +1,83 @@
+# RISC-V Assembler Test File
+# This file contains examples of all supported instructions.
+
+# ============================================
+# R-type Instructions (Register-Register)
+# ============================================
+add t0, s1, s2      # t0 = s1 + s2
+sub x10, x11, x12   # x10 = x11 - x12
+sll a0, a1, t0      # a0 = a1 << t0
+slt t1, s2, s3      # t1 = (s2 < s3) ? 1 : 0 (signed)
+sltu t2, s4, s5     # t2 = (s4 < s5) ? 1 : 0 (unsigned)
+xor a5, a4, a3      # a5 = a4 ^ a3
+srl a2, a3, t3      # a2 = a3 >> t3 (logical)
+sra a4, a5, t4      # a4 = a5 >> t4 (arithmetic)
+or t5, s6, s7       # t5 = s6 | s7
+and t6, s8, s9      # t6 = s8 & s9
+
+# ============================================
+# R-type Instructions (RV32M Extension)
+# ============================================
+mul s0, s1, s2      # s0 = s1 * s2 (lower 32 bits)
+mulh s3, s4, s5     # s3 = (s4 * s5) >> 32 (signed * signed)
+mulhsu s6, s7, s8   # s6 = (s7 * s8) >> 32 (signed * unsigned)
+mulhu s9, s10, s11  # s9 = (s10 * s11) >> 32 (unsigned * unsigned)
+div t0, t1, t2      # t0 = t1 / t2 (signed)
+divu t3, t4, t5     # t3 = t4 / t5 (unsigned)
+rem t6, a0, a1      # t6 = t1 % t2 (signed)
+remu a2, a3, a4     # a2 = a3 % a4 (unsigned)
+
+# ============================================
+# I-type Instructions (Immediate)
+# ============================================
+# ALU Immediate
+addi sp, sp, -16    # sp = sp - 16
+slti t0, ra, 100    # t0 = (ra < 100) ? 1 : 0 (signed)
+sltiu t1, s0, 200   # t1 = (s0 < 200) ? 1 : 0 (unsigned)
+xori a0, a1, 255    # a0 = a1 ^ 255
+ori a2, a3, 0       # a2 = a3 | 0
+andi a4, a5, 15     # a4 = a5 & 15
+
+# Shift Immediate
+slli t0, t0, 4      # t0 = t0 << 4
+srli t1, t1, 2      # t1 = t1 >> 2 (logical)
+srai t2, t2, 1      # t2 = t2 >> 1 (arithmetic)
+
+# Load Instructions
+lw a0, 64(sp)       # a0 = mem[sp + 64] (word)
+lb t0, -1(s0)       # t0 = mem[s0 - 1] (byte, sign-extended)
+lh t1, 4(s0)        # t1 = mem[s0 + 4] (half, sign-extended)
+lbu t2, 0(s1)       # t2 = mem[s1 + 0] (byte, zero-extended)
+lhu t3, 2(s1)       # t3 = mem[s1 + 2] (half, zero-extended)
+
+# Jump and Link Register
+jalr zero, ra, 0    # return from function call (jump to address in ra)
+
+# ============================================
+# S-type Instructions (Store)
+# ============================================
+sw ra, 12(sp)       # mem[sp + 12] = ra (word)
+sh a0, -4(s0)       # mem[s0 - 4] = a0 (lower 16 bits)
+sb a1, 0(s1)        # mem[s1 + 0] = a1 (lower 8 bits)
+
+# ============================================
+# B-type Instructions (Branch)
+# ============================================
+beq zero, zero, 40  # if (zero == zero) jump pc + 40
+bne a0, a1, -20     # if (a0 != a1) jump pc - 20
+blt s1, s2, 80      # if (s1 < s2) jump pc + 80 (signed)
+bge s3, s4, -100    # if (s3 >= s4) jump pc - 100 (signed)
+bltu s5, s6, 16     # if (s5 < s6) jump pc + 16 (unsigned)
+bgeu s7, s8, -8     # if (s7 >= s8) jump pc - 8 (unsigned)
+
+# ============================================
+# U-type Instructions (Upper Immediate)
+# ============================================
+lui t0, 4096        # t0 = 4096 << 12 (loads upper 20 bits)
+auipc t1, 1         # t1 = pc + (1 << 12)
+
+# ============================================
+# J-type Instructions (Jump)
+# ============================================
+jal ra, 256         # jump to pc + 256, store return address in ra
+jal zero, -512      # jump to pc - 512, discard return address
