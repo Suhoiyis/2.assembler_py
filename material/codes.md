@@ -1,4 +1,6 @@
-### RISC-V 指令格式规范
+### RISC-V 指令格式规范  
+[RISC-V 指令集参考手册](https://ai-embedded.com/risc-v/riscv-isa-manual/)
+一个可以用来辅助验证的[在线转换器](https://luplab.gitlab.io/rvcodecjs/)
 
 
 | **R-type** | `31-25`                        | `24-20`     | `19-15`     | `14-12`        | `11-7`     | `6-0`          |
@@ -183,7 +185,8 @@ JAL rd, offset: 跳转到offset指定的位置，并将返回地址（下一条�
 JALR rd, rs1, imm: 跳转到rs1加上立即数imm指定的位置，并将返回地址保存到rd。imm是一个12位立即数，可能需要符号扩展。
 
 
-### RV32M 扩展指令集
+### [RV32M 扩展指令集](https://ai-embedded.com/risc-v/riscv-isa-manual/)
+(其实格式与R型指令一致）
 1. MUL（funct3=0x0,funct7=0x1）
 语法：mul rd, rs1, rs2，作用是将rs1与rs2相乘，结果的低32位写入rd寄存器。
 2. MULH（func3=0x1,func7=0x1）
