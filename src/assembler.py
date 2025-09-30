@@ -266,7 +266,7 @@ def second_pass(lines, symbol_table):
 
         instr_info = INSTRUCTION_MAP[mnemonic_lower]
         instr_type = instr_info['type']
-        
+
         reg = r'([a-zA-Z0-9]+)'
         imm = r'(-?0x[0-9a-fA-F]+|-?\d+)' # 允许十六进制和十进制
         label = r'([a-zA-Z_]\w*)'
@@ -293,15 +293,18 @@ def second_pass(lines, symbol_table):
 
                 if instr_type in ('B', 'J'):
                     op_target = operands[-1]
+                    offset = 0
                     try:
-                        offset = int(op_target, 0) # <--- FIX
+                        offset = int(op_target, 0)
                     except ValueError:
                         target_lower = op_target.lower()
                         if target_lower not in symbol_table:
                             errors.append(f"第 {line_num} 行: 未定義的標籤 '{op_target}'")
                             matched = True; break
+
                         target_address = symbol_table[target_lower]
                         offset = target_address - address
+
                     operands[-1] = str(offset)
 
                 handler_map = {
