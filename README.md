@@ -16,6 +16,8 @@ _（上学期内容[assembler_py](https://github.com/Suhoiyis/assembler_py/tree/
 输入数据为`input.txt`，输出数据为`output.txt`  
 素材在`material`文件夹里
 ***
+
+```
 <2.assembler_py>/
  ├── 📁 src/
  │   └── 🐍 assembler.py      # Python 汇编器脚本
@@ -33,6 +35,7 @@ _（上学期内容[assembler_py](https://github.com/Suhoiyis/assembler_py/tree/
  ├── 📘 manual.md             # 使用说明
  ├── 📝 Development_Log.md    # 开发日志
  └── 📖 README.md             # 项目说明文件（本文件）
+```
 
 ***
 ##### 保持`main`分支，与最新发行版`Releases`一致，准确无误  
