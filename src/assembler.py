@@ -51,7 +51,7 @@ INSTRUCTION_MAP = {
     'sra':    {'type': 'R', 'opcode': '0110011', 'funct3': '101', 'funct7': '0100000'},
     'or':     {'type': 'R', 'opcode': '0110011', 'funct3': '110', 'funct7': '0000000'},
     'and':    {'type': 'R', 'opcode': '0110011', 'funct3': '111', 'funct7': '0000000'},
-    # R-type (RV32M Extension)，等待验证
+    # R-type (RV32M Extension)
     'mul':    {'type': 'R', 'opcode': '0110011', 'funct3': '000', 'funct7': '0000001'},
     'mulh':   {'type': 'R', 'opcode': '0110011', 'funct3': '001', 'funct7': '0000001'},
     'mulhsu': {'type': 'R', 'opcode': '0110011', 'funct3': '010', 'funct7': '0000001'},
@@ -204,7 +204,7 @@ def handle_u_type(instr, operands):
 
     rd_num = get_reg_num(rd_name)
     if rd_num is None: return None, f"无效的目标寄存器 (rd): '{rd_name}'"
-    
+
     rd = format(rd_num, '05b')
     imm = to_signed_binary(int(operands[1], 0), 20)
     return imm + rd + instr['opcode'], None
@@ -217,10 +217,17 @@ def handle_j_type(instr, operands):
 
     rd = format(rd_num, '05b')
     imm_val = int(operands[1], 0)
-    imm20 = (imm_val >> 20) & 1; imm19_12 = (imm_val >> 12) & 0xff
-    imm11 = (imm_val >> 11) & 1; imm10_1 = (imm_val >> 1) & 0x3ff
-    imm20_bin, imm19_12_bin = format(imm20, '01b'), format(imm19_12, '08b')
-    imm11_bin, imm10_1_bin = format(imm11, '01b'), format(imm10_1, '10b')
+
+    imm20 = (imm_val >> 20) & 1
+    imm19_12 = (imm_val >> 12) & 0xff
+    imm11 = (imm_val >> 11) & 1
+    imm10_1 = (imm_val >> 1) & 0x3ff
+
+    imm20_bin = format(imm20, '01b')
+    imm19_12_bin = format(imm19_12, '08b')
+    imm11_bin = format(imm11, '01b')
+    imm10_1_bin = format(imm10_1, '010b')
+
     return imm20_bin + imm10_1_bin + imm11_bin + imm19_12_bin + rd + instr['opcode'], None
 
 
@@ -269,7 +276,7 @@ def second_pass(lines, symbol_table):
 
         reg = r'([a-zA-Z0-9]+)'
         imm = r'(-?0x[0-9a-fA-F]+|-?\d+)' # 允许十六进制和十进制
-        label = r'([a-zA-Z_]\w*)'
+        label = r'[a-zA-Z_]\w*'
         target = f'({imm}|{label})'
 
         patterns = [
@@ -278,16 +285,16 @@ def second_pass(lines, symbol_table):
             (rf'{reg},\s*{imm}\({reg}\)', ('S', 'I-load')),
             (rf'{reg},\s*{target}', ('U', 'J')),
         ]
-        
+
         line_to_parse = ' '.join(cleaned.split()[1:])
-        
+
         matched = False
         for pattern, types in patterns:
             if instr_type not in types: continue
             match = re.fullmatch(pattern, line_to_parse.lower())
             if match:
                 operands = list(match.groups())
-                
+
                 # 清理由于正则表达式OR操作产生的None值
                 operands = [op for op in operands if op is not None]
 
@@ -299,7 +306,7 @@ def second_pass(lines, symbol_table):
                     except ValueError:
                         target_lower = op_target.lower()
                         if target_lower not in symbol_table:
-                            errors.append(f"第 {line_num} 行: 未定義的標籤 '{op_target}'")
+                            errors.append(f"第 {line_num} 行: 未定义的标签 '{op_target}'")
                             matched = True; break
 
                         target_address = symbol_table[target_lower]
@@ -307,12 +314,14 @@ def second_pass(lines, symbol_table):
 
                     operands[-1] = str(offset)
 
+                # print("即将处理的操作数:", operands)
+
                 handler_map = {
                     'R': handle_r_type, 'I': handle_i_type, 'I-shift': handle_i_shift_type,
                     'I-load': handle_i_load_type, 'S': handle_s_type, 'B': handle_b_type,
                     'U': handle_u_type, 'J': handle_j_type,
                 }
-                
+
                 code, err = handler_map[instr_type](instr_info, operands)
                 if err:
                     errors.append(f"第 {line_num} 行 ({cleaned}): {err}")
@@ -320,9 +329,9 @@ def second_pass(lines, symbol_table):
                     machine_codes.append(code)
                 matched = True
                 break
-        
+
         if not matched and not any(f"第 {line_num} 行" in e for e in errors):
-            errors.append(f"第 {line_num} 行: 無法解析的操作數格式 '{line_to_parse}'")
+            errors.append(f"第 {line_num} 行: 无法解析的操作数格式 '{line_to_parse}'")
 
         address += 4
     return machine_codes, errors
@@ -332,32 +341,32 @@ def assemble(input_file_path, output_file_path):
         with open(input_file_path, 'r', encoding='utf-8') as infile:
             lines = infile.readlines()
     except FileNotFoundError:
-        print(f"錯誤: 輸入文件 '{input_file_path}' 未找到。")
+        print(f"错误: 输入文件 '{input_file_path}' 未找到。")
         return
     except Exception as e:
-        print(f"讀取文件時發生錯誤: {e}")
+        print(f"读取文件时发生错误: {e}")
         return
 
     symbol_table, err = first_pass(lines)
     if err:
-        print(f"第一遍掃描出錯: {err}")
+        print(f"第一遍扫描出错误: {err}")
         return
-        
+
     machine_codes, errors = second_pass(lines, symbol_table)
 
     if errors:
-        print("匯編過程中發現錯誤:")
+        print("汇编过程中发现错误:")
         for e in errors: print(f"- {e}")
-        print("由於存在錯誤，未生成輸出文件。")
+        print("由于存在错误，未生成输出文件。")
         return
 
     try:
         with open(output_file_path, 'w', encoding='utf-8') as outfile:
             for code in machine_codes:
                 outfile.write(code + '\n')
-        print(f"匯編成功！共 {len(machine_codes)} 條指令。機器碼已保存至 '{output_file_path}'。")
+        print(f"汇编成功！共 {len(machine_codes)} 条指令。机器码已保存至 '{output_file_path}'。")
     except Exception as e:
-        print(f"寫入輸出文件時發生錯誤: {e}")
+        print(f"写入输出文件时发生错误: {e}")
 
 # ==============================================================================
 # 使用示例

@@ -64,16 +64,16 @@ _start:
     # 3. Branch/Jump (分支/跳转) 测试 (B-Type 和 J-Type)
     # ======================================================================
 branch_tests:
-    beq   s7, a0, forward  # s7和a0都应为10, 此跳转会成功
+    beq   s7, a0, forward_branch  # s7和a0都应为10, 此跳转会成功
     add   zero, zero, zero        # 这条指令应该被跳过 (NOP)
 
-forward:
+forward_branch:
     addi  a7, zero, 3       # 初始化循环计数器
 loop_start:
     bne   a7, zero, loop_start  # 这会是一个死循环，我们用jal跳出
     jal   ra, function_call   # 跳转到函数，并将返回地址存入ra
 
-backward:
+backward_branch_target:
     blt   s8, s9, branch_ok   # s8(-2) < s9(8), 此跳转会成功
     add   zero, zero, zero    # 这条指令应该被跳过 (NOP)
 branch_ok:
