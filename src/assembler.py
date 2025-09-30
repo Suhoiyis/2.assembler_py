@@ -363,3 +363,5 @@ script_path = os.path.abspath(__file__)
 project_root = os.path.dirname(os.path.dirname(script_path))
 input_filename = os.path.join(project_root, 'data', 'input.txt')
 output_filename = os.path.join(project_root, 'data', 'output.txt')
+
+assemble(input_filename, output_filename)
