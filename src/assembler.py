@@ -37,7 +37,6 @@ REGISTER_MAP = {
     'x31': 31, 't6': 31,
 }
 
-
 # 指令信息库
 INSTRUCTION_MAP = {
     # R-type
