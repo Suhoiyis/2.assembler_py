@@ -1,7 +1,7 @@
 ### **RISC-V 汇编器 (Assembler) 使用说明书**
 
-**文档版本：1.1**
-**最后更新：2025年9月30日**
+**文档版本：1.1.1**
+**最后更新：2025年10月31日**
 
 #### **1. 简介**
 
@@ -49,22 +49,24 @@
 
 ```
 <2.assembler_py>/
-├── 📁 src/
-│ └── 🐍 assembler.py # Python 汇编器脚本
-│
-├── 📁 data/
-│ ├── 📄 input.txt # 汇编指令输入文件
-│ ├── 📄 output.txt # 汇编生成的 32 位机器码
-│
-├── 📁 material/
-│ ├── 📁 pngs/ # 图片素材
-│ ├── 📝 registers.md # 寄存器说明文档
-│ ├── 📝 codes.md # 指令说明文档
-│ └── 📊 指令.ppt # 指令演示文稿
-│
-├── 📘 manual.md # 使用说明（本文件）
-├── 📝 Development_Log.md # 开发日志
-└── 📖 README.md # 项目说明文件
+ ├── 📁 src/
+ │   └── 🐍 assembler.py      # Python 汇编器脚本
+ │
+ ├── 📁 data/
+ │   ├── 📁 uart/             # UART 输入输出相关
+ │   ├── 📄 input.txt         # 汇编指令输入文件
+ │   └── 📄 output.txt        # 汇编生成的 32 位机器码
+ │
+ ├── 📁 material/
+ │   ├── 📁 pngs/             # 图片素材
+ │   ├── 📝 registers.md      # 寄存器说明文档
+ │   ├── 📝 codes.md          # 指令说明文档
+ │   ├── 📊 一个32位....ppt    # 项目总ppt
+ │   └── 📊 指令.ppt          # 指令演示文稿
+ │
+ ├── 📘 manual.md             # 使用说明
+ ├── 📝 Development_Log.md    # 开发日志
+ └── 📖 README.md             # 项目说明文件（本文件）
 ```
 
 #### **4. 如何使用**
