@@ -1,9 +1,10 @@
 import re
+import os
 
 # 寄存器名称到编号的映射表
 REGISTER_MAP = {
-    'x0': 0, 'zero': 0,
-    'x1': 1, 'ra': 1,
+    'x0': 0, 'zero': 0, 'r0': 0,
+    'x1': 1, 'ra': 1, 'r1': 1,
     'x2': 2, 'sp': 2,
     'x3': 3, 'gp': 3,
     'x4': 4, 'tp': 4,
@@ -36,7 +37,6 @@ REGISTER_MAP = {
     'x31': 31, 't6': 31,
 }
 
-
 # 指令信息库
 INSTRUCTION_MAP = {
     # R-type
@@ -50,7 +50,7 @@ INSTRUCTION_MAP = {
     'sra':    {'type': 'R', 'opcode': '0110011', 'funct3': '101', 'funct7': '0100000'},
     'or':     {'type': 'R', 'opcode': '0110011', 'funct3': '110', 'funct7': '0000000'},
     'and':    {'type': 'R', 'opcode': '0110011', 'funct3': '111', 'funct7': '0000000'},
-    # R-type (RV32M Extension)，等待验证
+    # R-type (RV32M Extension)
     'mul':    {'type': 'R', 'opcode': '0110011', 'funct3': '000', 'funct7': '0000001'},
     'mulh':   {'type': 'R', 'opcode': '0110011', 'funct3': '001', 'funct7': '0000001'},
     'mulhsu': {'type': 'R', 'opcode': '0110011', 'funct3': '010', 'funct7': '0000001'},
@@ -109,106 +109,211 @@ def get_reg_num(reg_name):
     return REGISTER_MAP.get(reg_name.lower())
 
 def handle_r_type(instr, operands):
-    rd_num, rs1_num, rs2_num = get_reg_num(operands[0]), get_reg_num(operands[1]), get_reg_num(operands[2])
-    if any(r is None for r in [rd_num, rs1_num, rs2_num]): return None
+    rd_name, rs1_name, rs2_name = operands[0], operands[1], operands[2]
+
+    rd_num = get_reg_num(rd_name)
+    if rd_num is None: return None, f"无效的目标寄存器 (rd): '{rd_name}'"
+
+    rs1_num = get_reg_num(rs1_name)
+    if rs1_num is None: return None, f"无效的源寄存器 (rs1): '{rs1_name}'"
+
+    rs2_num = get_reg_num(rs2_name)
+    if rs2_num is None: return None, f"无效的源寄存器 (rs2): '{rs2_name}'"
+
     rd, rs1, rs2 = format(rd_num, '05b'), format(rs1_num, '05b'), format(rs2_num, '05b')
-    return instr['funct7'] + rs2 + rs1 + instr['funct3'] + rd + instr['opcode']
+    return instr['funct7'] + rs2 + rs1 + instr['funct3'] + rd + instr['opcode'], None
 
 def handle_i_type(instr, operands):
-    rd_num, rs1_num = get_reg_num(operands[0]), get_reg_num(operands[1])
-    if any(r is None for r in [rd_num, rs1_num]): return None
+    rd_name, rs1_name = operands[0], operands[1]
+
+    rd_num = get_reg_num(rd_name)
+    if rd_num is None: return None, f"无效的目标寄存器 (rd): '{rd_name}'"
+
+    rs1_num = get_reg_num(rs1_name)
+    if rs1_num is None: return None, f"无效的源寄存器 (rs1): '{rs1_name}'"
+
     rd, rs1 = format(rd_num, '05b'), format(rs1_num, '05b')
-    imm = to_signed_binary(int(operands[2]), 12)
-    return imm + rs1 + instr['funct3'] + rd + instr['opcode']
+    imm = to_signed_binary(int(operands[2], 0), 12)
+    return imm + rs1 + instr['funct3'] + rd + instr['opcode'], None
 
 def handle_i_shift_type(instr, operands):
-    rd_num, rs1_num = get_reg_num(operands[0]), get_reg_num(operands[1])
-    if any(r is None for r in [rd_num, rs1_num]): return None
+    rd_name, rs1_name = operands[0], operands[1]
+
+    rd_num = get_reg_num(rd_name)
+    if rd_num is None: return None, f"无效的目标寄存器 (rd): '{rd_name}'"
+
+    rs1_num = get_reg_num(rs1_name)
+    if rs1_num is None: return None, f"无效的源寄存器 (rs1): '{rs1_name}'"
+
     rd, rs1 = format(rd_num, '05b'), format(rs1_num, '05b')
-    shamt = format(int(operands[2]), '05b')
-    return instr['funct7'] + shamt + rs1 + instr['funct3'] + rd + instr['opcode']
+    shamt = format(int(operands[2], 0), '05b')
+    return instr['funct7'] + shamt + rs1 + instr['funct3'] + rd + instr['opcode'], None
 
 def handle_i_load_type(instr, operands):
-    rd_num, rs1_num = get_reg_num(operands[0]), get_reg_num(operands[2])
-    if any(r is None for r in [rd_num, rs1_num]): return None
+    rd_name, rs1_name = operands[0], operands[2]
+
+    rd_num = get_reg_num(rd_name)
+    if rd_num is None: return None, f"无效的目标寄存器 (rd): '{rd_name}'"
+
+    rs1_num = get_reg_num(rs1_name)
+    if rs1_num is None: return None, f"无效的基址寄存器 (rs1): '{rs1_name}'"
+
     rd, rs1 = format(rd_num, '05b'), format(rs1_num, '05b')
-    imm = to_signed_binary(int(operands[1]), 12)
-    return imm + rs1 + instr['funct3'] + rd + instr['opcode']
+    imm = to_signed_binary(int(operands[1], 0), 12)
+    return imm + rs1 + instr['funct3'] + rd + instr['opcode'], None
 
 def handle_s_type(instr, operands):
-    rs2_num, rs1_num = get_reg_num(operands[0]), get_reg_num(operands[2])
-    if any(r is None for r in [rs2_num, rs1_num]): return None
+    rs2_name, rs1_name = operands[0], operands[2]
+
+    rs2_num = get_reg_num(rs2_name)
+    if rs2_num is None: return None, f"无效的源寄存器 (rs2): '{rs2_name}'"
+
+    rs1_num = get_reg_num(rs1_name)
+    if rs1_num is None: return None, f"无效的基址寄存器 (rs1): '{rs1_name}'"
+
     rs2, rs1 = format(rs2_num, '05b'), format(rs1_num, '05b')
-    imm = to_signed_binary(int(operands[1]), 12)
+    imm = to_signed_binary(int(operands[1], 0), 12)
     imm11_5, imm4_0 = imm[0:7], imm[7:12]
-    return imm11_5 + rs2 + rs1 + instr['funct3'] + imm4_0 + instr['opcode']
+    return imm11_5 + rs2 + rs1 + instr['funct3'] + imm4_0 + instr['opcode'], None
+
 
 def handle_b_type(instr, operands):
-    rs1_num, rs2_num = get_reg_num(operands[0]), get_reg_num(operands[1])
-    if any(r is None for r in [rs1_num, rs2_num]): return None
+    op1_name, op2_name = operands[0], operands[1]
+    # 如果是伪指令 (ble)，交换操作数
+    if instr.get('swap_operands', False):
+        op1_name, op2_name = op2_name, op1_name
+
+    rs1_num = get_reg_num(op1_name)
+    if rs1_num is None: return None, f"无效的源寄存器 (rs1): '{op1_name}'"
+
+    rs2_num = get_reg_num(op2_name)
+    if rs2_num is None: return None, f"无效的源寄存器 (rs2): '{op2_name}'"
+
     rs1, rs2 = format(rs1_num, '05b'), format(rs2_num, '05b')
+    imm_val = int(operands[2], 0)
+    imm12 = (imm_val >> 12) & 1; imm11 = (imm_val >> 11) & 1
+    imm10_5 = (imm_val >> 5) & 0b111111; imm4_1 = (imm_val >> 1) & 0b1111
+    imm12_bin, imm11_bin = format(imm12, '01b'), format(imm11, '01b')
+    imm10_5_bin, imm4_1_bin = format(imm10_5, '06b'), format(imm4_1, '04b')
+    return imm12_bin + imm10_5_bin + rs2 + rs1 + instr['funct3'] + imm4_1_bin + imm11_bin + instr['opcode'], None
 
-    imm_val = int(operands[2])
-
-    # Extract immediate bits using reliable bitwise shifts and masks
-    imm12 = (imm_val >> 12) & 1
-    imm11 = (imm_val >> 11) & 1
-    imm10_5 = (imm_val >> 5) & 0b111111  # 6 bits
-    imm4_1 = (imm_val >> 1) & 0b1111    # 4 bits
-
-    # Convert extracted parts to binary strings
-    imm12_bin = format(imm12, '01b')
-    imm11_bin = format(imm11, '01b')
-    imm10_5_bin = format(imm10_5, '06b')
-    imm4_1_bin = format(imm4_1, '04b')
-
-    # Assemble the final instruction string
-    # Format: imm[12|10:5] | rs2 | rs1 | funct3 | imm[4:1|11] | opcode
-    return imm12_bin + imm10_5_bin + rs2 + rs1 + instr['funct3'] + imm4_1_bin + imm11_bin + instr['opcode']
 
 def handle_u_type(instr, operands):
-    rd_num = get_reg_num(operands[0])
-    if rd_num is None: return None
+    rd_name = operands[0]
+
+    rd_num = get_reg_num(rd_name)
+    if rd_num is None: return None, f"无效的目标寄存器 (rd): '{rd_name}'"
+
     rd = format(rd_num, '05b')
-    imm = to_signed_binary(int(operands[1]), 20)
-    return imm + rd + instr['opcode']
+    imm = to_signed_binary(int(operands[1], 0), 20)
+    return imm + rd + instr['opcode'], None
 
 def handle_j_type(instr, operands):
-    rd_num = get_reg_num(operands[0])
-    if rd_num is None: return None
+    rd_name = operands[0]
+
+    rd_num = get_reg_num(rd_name)
+    if rd_num is None: return None, f"无效的目标寄存器 (rd): '{rd_name}'"
+
     rd = format(rd_num, '05b')
-    imm = to_signed_binary(int(operands[1]), 21)
-    imm20, imm10_1, imm11, imm19_12 = imm[0], imm[10:20], imm[9], imm[1:9]
-    return imm20 + imm10_1 + imm11 + imm19_12 + rd + instr['opcode']
+    imm_val = int(operands[1], 0)
 
-# 指令解析与分发 (已更新正则表达式)
-def parse_and_convert(line):
-    line = line.strip()
-    if not line or line.startswith('#'):
-        return None, None
+    imm20 = (imm_val >> 20) & 1
+    imm19_12 = (imm_val >> 12) & 0xff
+    imm11 = (imm_val >> 11) & 1
+    imm10_1 = (imm_val >> 1) & 0x3ff
 
-    # 更通用的正则表达式，用于捕获物理寄存器(x_num)或ABI名称
-    reg = r'([a-zA-Z0-9]+)'
-    imm = r'(-?\d+)'
+    imm20_bin = format(imm20, '01b')
+    imm19_12_bin = format(imm19_12, '08b')
+    imm11_bin = format(imm11, '01b')
+    imm10_1_bin = format(imm10_1, '010b')
 
-    patterns = [
-        (rf'(\w+)\s+{reg},\s*{reg},\s*{reg}', ('R')),
-        (rf'(\w+)\s+{reg},\s*{reg},\s*{imm}', ('I', 'I-shift', 'B')),
-        (rf'(\w+)\s+{reg},\s*{imm}\({reg}\)', ('S', 'I-load')),
-        (rf'(\w+)\s+{reg},\s*{imm}', ('U', 'J')),
-    ]
+    return imm20_bin + imm10_1_bin + imm11_bin + imm19_12_bin + rd + instr['opcode'], None
 
-    original_line = line
-    line = line.lower() # 转为小写以匹配map
 
-    for pattern, types in patterns:
-        match = re.match(pattern, line)
-        if match:
-            mnemonic = match.group(1)
-            if mnemonic in INSTRUCTION_MAP and INSTRUCTION_MAP[mnemonic]['type'] in types:
-                instr_info = INSTRUCTION_MAP[mnemonic]
-                instr_type = instr_info['type']
-                operands = match.groups()[1:]
+def clean_line(line):
+    return line.split('#')[0].split('//')[0].strip()
+
+def first_pass(lines):
+    symbol_table = {}
+    address = 0
+    for line in lines:
+        cleaned = clean_line(line)
+        if not cleaned: continue
+        label_match = re.match(r'^\s*([a-zA-Z_]\w*):\s*$', cleaned)
+        label_with_instr_match = re.match(r'^\s*([a-zA-Z_]\w*):\s*(.*)', cleaned)
+        if label_match:
+            symbol_table[label_match.group(1).lower()] = address
+        elif label_with_instr_match:
+            label = label_with_instr_match.group(1).lower()
+            instr = label_with_instr_match.group(2).strip()
+            symbol_table[label] = address
+            if instr: address += 4
+        else: address += 4
+    return symbol_table, None
+
+def second_pass(lines, symbol_table):
+    machine_codes = []
+    address = 0
+    errors = []
+    for line_num, line in enumerate(lines, 1):
+        cleaned = clean_line(line)
+        if ':' in cleaned:
+            cleaned = re.sub(r'^\s*[a-zA-Z_]\w*:\s*', '', cleaned).strip()
+        if not cleaned: continue
+        try:
+            mnemonic_lower = cleaned.split()[0].lower()
+            if mnemonic_lower not in INSTRUCTION_MAP:
+                errors.append(f"第 {line_num} 行: 未知指令 '{mnemonic_lower}'")
+                address += 4
+                continue
+        except IndexError:
+            address += 4
+            continue
+
+        instr_info = INSTRUCTION_MAP[mnemonic_lower]
+        instr_type = instr_info['type']
+
+        reg = r'([a-zA-Z0-9]+)'
+        imm = r'(-?0x[0-9a-fA-F]+|-?\d+)' # 允许十六进制和十进制
+        label = r'[a-zA-Z_]\w*'
+        target = f'({imm}|{label})'
+
+        patterns = [
+            (rf'{reg},\s*{reg},\s*{reg}', ('R')),
+            (rf'{reg},\s*{reg},\s*{target}', ('I', 'I-shift', 'B')),
+            (rf'{reg},\s*{imm}\({reg}\)', ('S', 'I-load')),
+            (rf'{reg},\s*{target}', ('U', 'J')),
+        ]
+
+        line_to_parse = ' '.join(cleaned.split()[1:])
+
+        matched = False
+        for pattern, types in patterns:
+            if instr_type not in types: continue
+            match = re.fullmatch(pattern, line_to_parse.lower())
+            if match:
+                operands = list(match.groups())
+
+                # 清理由于正则表达式OR操作产生的None值
+                operands = [op for op in operands if op is not None]
+
+                if instr_type in ('B', 'J'):
+                    op_target = operands[-1]
+                    offset = 0
+                    try:
+                        offset = int(op_target, 0)
+                    except ValueError:
+                        target_lower = op_target.lower()
+                        if target_lower not in symbol_table:
+                            errors.append(f"第 {line_num} 行: 未定义的标签 '{op_target}'")
+                            matched = True; break
+
+                        target_address = symbol_table[target_lower]
+                        offset = target_address - address
+
+                    operands[-1] = str(offset)
+
+                # print("即将处理的操作数:", operands)
 
                 handler_map = {
                     'R': handle_r_type, 'I': handle_i_type, 'I-shift': handle_i_shift_type,
@@ -216,34 +321,58 @@ def parse_and_convert(line):
                     'U': handle_u_type, 'J': handle_j_type,
                 }
 
-                machine_code = handler_map[instr_type](instr_info, operands)
-
-                if machine_code:
-                    return machine_code, None
+                code, err = handler_map[instr_type](instr_info, operands)
+                if err:
+                    errors.append(f"第 {line_num} 行 ({cleaned}): {err}")
                 else:
-                    return None, f"警告: 指令 '{original_line}' 中包含无效的寄存器名称。"
+                    machine_codes.append(code)
+                matched = True
+                break
 
-    return None, f"警告: 无法解析或不支持的指令 '{original_line}'，已跳过。"
+        if not matched and not any(f"第 {line_num} 行" in e for e in errors):
+            errors.append(f"第 {line_num} 行: 无法解析的操作数格式 '{line_to_parse}'")
 
-# 主转换函数
-def convert_instructions_to_machine_code(input_file_path, output_file_path):
+        address += 4
+    return machine_codes, errors
+
+def assemble(input_file_path, output_file_path):
     try:
-        with open(input_file_path, 'r') as infile, open(output_file_path, 'w') as outfile:
-            for line_num, line in enumerate(infile, 1):
-                machine_code, error_msg = parse_and_convert(line)
-                if machine_code:
-                    outfile.write(machine_code + '\n')
-                elif error_msg:
-                    print(f"第 {line_num} 行: {error_msg}")
-        print(f"转换完成！机器码已保存至 '{output_file_path}'。")
+        with open(input_file_path, 'r', encoding='utf-8') as infile:
+            lines = infile.readlines()
     except FileNotFoundError:
         print(f"错误: 输入文件 '{input_file_path}' 未找到。")
+        return
     except Exception as e:
-        print(f"发生未知错误: {e}")
+        print(f"读取文件时发生错误: {e}")
+        return
 
+    symbol_table, err = first_pass(lines)
+    if err:
+        print(f"第一遍扫描出错误: {err}")
+        return
 
-input_filename = "data/input.txt"
-output_filename = "data/output.txt"
+    machine_codes, errors = second_pass(lines, symbol_table)
 
-# 执行
-convert_instructions_to_machine_code(input_filename, output_filename)
+    if errors:
+        print("汇编过程中发现错误:")
+        for e in errors: print(f"- {e}")
+        print("由于存在错误，未生成输出文件。")
+        return
+
+    try:
+        with open(output_file_path, 'w', encoding='utf-8') as outfile:
+            for code in machine_codes:
+                outfile.write(code + '\n')
+        print(f"汇编成功！共 {len(machine_codes)} 条指令。机器码已保存至 '{output_file_path}'。")
+    except Exception as e:
+        print(f"写入输出文件时发生错误: {e}")
+
+# ==============================================================================
+# 使用示例
+# ==============================================================================
+script_path = os.path.abspath(__file__)
+project_root = os.path.dirname(os.path.dirname(script_path))
+input_filename = os.path.join(project_root, 'data', 'input.txt')
+output_filename = os.path.join(project_root, 'data', 'output.txt')
+
+assemble(input_filename, output_filename)

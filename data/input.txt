@@ -1,83 +1,118 @@
-# RISC-V Assembler Test File
-# This file contains examples of all supported instructions.
+# ======================================================================
+# RISC-V Assembler Comprehensive Test Suite
+# 旨在覆盖所有已支持的指令和寄存器别名
+# ======================================================================
 
-# ============================================
-# R-type Instructions (Register-Register)
-# ============================================
-add t0, s1, s2      # t0 = s1 + s2
-sub x10, x11, x12   # x10 = x11 - x12
-sll a0, a1, t0      # a0 = a1 << t0
-slt t1, s2, s3      # t1 = (s2 < s3) ? 1 : 0 (signed)
-sltu t2, s4, s5     # t2 = (s4 < s5) ? 1 : 0 (unsigned)
-xor a5, a4, a3      # a5 = a4 ^ a3
-srl a2, a3, t3      # a2 = a3 >> t3 (logical)
-sra a4, a5, t4      # a4 = a5 >> t4 (arithmetic)
-or t5, s6, s7       # t5 = s6 | s7
-and t6, s8, s9      # t6 = s8 & s9
+_start:
+    # ------------------------------------------------------------------
+    # Part 1: U-Type and J-Type Instructions (LUI, AUIPC, JAL)
+    # ------------------------------------------------------------------
+    lui   gp, 0xBEEF0             # gp (x3) = 0xBEEF0000, 测试 LUI
+    auipc tp, 0x1                 # tp (x4) = PC + 0x1000, 测试 AUIPC
+    jal   ra, setup_stack         # 跳转到 setup_stack, ra (x1) 保存返回地址
 
-# ============================================
-# R-type Instructions (RV32M Extension)
-# ============================================
-mul s0, s1, s2      # s0 = s1 * s2 (lower 32 bits)
-mulh s3, s4, s5     # s3 = (s4 * s5) >> 32 (signed * signed)
-mulhsu s6, s7, s8   # s6 = (s7 * s8) >> 32 (signed * unsigned)
-mulhu s9, s10, s11  # s9 = (s10 * s11) >> 32 (unsigned * unsigned)
-div t0, t1, t2      # t0 = t1 / t2 (signed)
-divu t3, t4, t5     # t3 = t4 / t5 (unsigned)
-rem t6, a0, a1      # t6 = t1 % t2 (signed)
-remu a2, a3, a4     # a2 = a3 % a4 (unsigned)
+# ======================================================================
+# Part 2: R-Type Instructions (Arithmetic, Logic, Shift, M-Ext)
+# ======================================================================
+r_type_tests:
+    # --- 初始化测试数据 ---
+    addi  a0, zero, 100           # a0 (x10) = 100
+    addi  a1, x0, -50             # a1 (x11) = -50
 
-# ============================================
-# I-type Instructions (Immediate)
-# ============================================
-# ALU Immediate
-addi sp, sp, -16    # sp = sp - 16
-slti t0, ra, 100    # t0 = (ra < 100) ? 1 : 0 (signed)
-sltiu t1, s0, 200   # t1 = (s0 < 200) ? 1 : 0 (unsigned)
-xori a0, a1, 255    # a0 = a1 ^ 255
-ori a2, a3, 0       # a2 = a3 | 0
-andi a4, a5, 15     # a4 = a5 & 15
+    # --- Standard Arithmetic & Logic ---
+    add   a2, a0, a1              # a2 = 100 + (-50) = 50
+    sub   a3, a0, a1              # a3 = 100 - (-50) = 150
+    xor   a4, a0, a1              # a4 = 100 XOR -50
+    or    a5, a0, a3              # a5 = 100 OR 150
+    and   a6, a0, a3              # a6 = 100 AND 150
 
-# Shift Immediate
-slli t0, t0, 4      # t0 = t0 << 4
-srli t1, t1, 2      # t1 = t1 >> 2 (logical)
-srai t2, t2, 1      # t2 = t2 >> 1 (arithmetic)
+    # --- Shift Operations ---
+    addi  t0, zero, 5             # t0 (x5) = 5 (作为位移量)
+    sll   a7, a0, t0              # a7 = 100 << 5
+    srl   t1, a0, t0              # t1 (x6) = 100 >> 5 (逻辑右移)
+    sra   t2, a1, t0              # t2 (x7) = -50 >> 5 (算术右移, 保持符号位)
 
-# Load Instructions
-lw a0, 64(sp)       # a0 = mem[sp + 64] (word)
-lb t0, -1(s0)       # t0 = mem[s0 - 1] (byte, sign-extended)
-lh t1, 4(s0)        # t1 = mem[s0 + 4] (half, sign-extended)
-lbu t2, 0(s1)       # t2 = mem[s1 + 0] (byte, zero-extended)
-lhu t3, 2(s1)       # t3 = mem[s1 + 2] (half, zero-extended)
+    # --- Comparison Operations ---
+    slt   s1, a1, a0              # s1 (x9) = (-50 < 100) ? 1 : 0 -> 1
+    sltu  s2, a1, a0              # s2 (x18) = (unsigned(-50) < 100) ? 0 : 1 -> 0
 
-# Jump and Link Register
-jalr zero, ra, 0    # return from function call (jump to address in ra)
+    # --- RV32M Standard Extension (M-Type) ---
+    mul    s3, a0, a1             # s3 (x19) = 100 * -50
+    div    s4, s3, a0             # s4 (x20) = (100 * -50) / 100 = -50
+    divu   s5, a3, t0             # s5 (x21) = 150 / 5 (无符号)
+    rem    s6, a1, t0             # s6 (x22) = -50 % 5 = 0
+    remu   s7, a3, t0             # s7 (x23) = 150 % 5 = 0 (无符号)
+    mulh   s8, a0, a1             # s8 (x24) = (100 * -50) 的高32位 (有符号 * 有符号)
+    mulhu  s9, a0, a0             # s9 (x25) = (100 * 100) 的高32位 (无符号 * 无符号)
+    mulhsu s10, a1, a0            # s10(x26) = (-50 * 100) 的高32位 (有符号 * 无符号)
+    jalr   zero, ra, 0            # 从 R-Type 测试返回
 
-# ============================================
-# S-type Instructions (Store)
-# ============================================
-sw ra, 12(sp)       # mem[sp + 12] = ra (word)
-sh a0, -4(s0)       # mem[s0 - 4] = a0 (lower 16 bits)
-sb a1, 0(s1)        # mem[s1 + 0] = a1 (lower 8 bits)
+# ======================================================================
+# Part 3: I-Type Instructions (Immediate Arithmetic, Logic, Shift, Load, JALR)
+# ======================================================================
+setup_stack:
+    addi  sp, sp, -16             # sp (x2) = sp - 16, 分配栈空间
+    addi  s0, zero, 123           # s0/fp (x8) = 123
+    
+    # --- Store (S-Type) Instructions ---
+    sw    s0, 0(sp)               # 将 123 存入 [sp+0]
+    sh    a1, 4(sp)               # 将 -50 的低16位存入 [sp+4]
+    sb    a2, 6(sp)               # 将 50 的低8位存入 [sp+6]
 
-# ============================================
-# B-type Instructions (Branch)
-# ============================================
-beq zero, zero, 40  # if (zero == zero) jump pc + 40
-bne a0, a1, -20     # if (a0 != a1) jump pc - 20
-blt s1, s2, 80      # if (s1 < s2) jump pc + 80 (signed)
-bge s3, s4, -100    # if (s3 >= s4) jump pc - 100 (signed)
-bltu s5, s6, 16     # if (s5 < s6) jump pc + 16 (unsigned)
-bgeu s7, s8, -8     # if (s7 >= s8) jump pc - 8 (unsigned)
+    # --- Load (I-Type) Instructions ---
+    lw    t3, 0(sp)               # t3 (x28) = Mem[sp+0] -> 123
+    lh    t4, 4(sp)               # t4 (x29) = Mem[sp+4] -> -50
+    lbu   t5, 6(sp)               # t5 (x30) = Mem[sp+6] (无符号加载) -> 50
+    lhu   s11, 4(sp)              # s11(x27) = Mem[sp+4] (无符号加载)
 
-# ============================================
-# U-type Instructions (Upper Immediate)
-# ============================================
-lui t0, 4096        # t0 = 4096 << 12 (loads upper 20 bits)
-auipc t1, 1         # t1 = pc + (1 << 12)
+    # --- Immediate Arithmetic & Logic ---
+    addi  fp, s0, 1               # fp = 123 + 1 = 124
+    xori  t6, fp, 0xFF            # t6 (x31) = 124 XOR 255
+    ori   t6, t6, 10              # t6 = t6 OR 10
+    andi  t6, t6, 128
+    slti  ra, t3, 200             # ra = (123 < 200) ? 1 : 0 -> 1
+    sltiu ra, t3, 100             # ra = (123 < 100) ? 0 : 1 -> 0
 
-# ============================================
-# J-type Instructions (Jump)
-# ============================================
-jal ra, 256         # jump to pc + 256, store return address in ra
-jal zero, -512      # jump to pc - 512, discard return address
+    # --- Immediate Shift ---
+    slli  ra, t3, 2               # ra = 123 << 2
+    srli  ra, ra, 1               # ra = ra >> 1 (逻辑右移)
+    srai  ra, t4, 3               # ra = -50 >> 3 (算术右移)
+
+    jal  ra, r_type_tests     # 使用 JALR 跳转到 r_type_tests
+
+# ======================================================================
+# Part 4: B-Type Instructions (Conditional Branches)
+# ======================================================================
+branch_section:
+    # 比较 t3(123) 和 fp(124)
+    beq   t3, fp, error_label     # 不相等，不跳转
+    bne   t3, fp, compare_signed  # 不相等，跳转
+    jal   zero, error_label       # 这条应该被跳过
+
+compare_signed:
+    # 比较 t4(-50) 和 t3(123)
+    blt   t4, t3, compare_unsigned # t4 < t3，跳转
+    jal   zero, error_label        # 这条应该被跳过
+
+compare_unsigned:
+    # 比较 t5(50) 和 t3(123)
+    bltu  t5, t3, ge_tests         # 50 < 123, 跳转
+    jal   zero, error_label        # 这条应该被跳过
+
+ge_tests:
+    # 比较 fp(124) 和 t3(123)
+    bge   fp, t3, geu_tests        # 124 >= 123, 跳转
+    jal   zero, error_label        # 这条应该被跳过
+
+geu_tests:
+    bgeu  fp, t3, end_program      # 124 >= 123 (无符号), 跳转
+    jal   zero, error_label        # 这条应该被跳过
+
+error_label:
+    # 如果程序跳转到这里，说明分支逻辑有误
+    # 无限循环以标识错误
+    beq   zero, zero, error_label
+
+end_program:
+    # 程序正常结束的无限循环
+    beq   zero, zero, end_program
