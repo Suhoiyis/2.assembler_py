@@ -46,14 +46,38 @@ REGISTER_MAP = {
 
 # 反向映射，用于GUI显示
 REG_NUM_TO_NAME = {
-    0: 'x0(zero)', 1: 'x1(ra)', 2: 'x2(sp)', 3: 'x3(gp)',
-    4: 'x4(tp)', 5: 'x5(t0)', 6: 'x6(t1)', 7: 'x7(t2)',
-    8: 'x8(s0/fp)', 9: 'x9(s1)', 10: 'x10(a0)', 11: 'x11(a1)',
-    12: 'x12(a2)', 13: 'x13(a3)', 14: 'x14(a4)', 15: 'x15(a5)',
-    16: 'x16(a6)', 17: 'x17(a7)', 18: 'x18(s2)', 19: 'x19(s3)',
-    20: 'x20(s4)', 21: 'x21(s5)', 22: 'x22(s6)', 23: 'x23(s7)',
-    24: 'x24(s8)', 25: 'x25(s9)', 26: 'x26(s10)', 27: 'x27(s11)',
-    28: 'x28(t3)', 29: 'x29(t4)', 30: 'x30(t5)', 31: 'x31(t6)',
+    0: 'x0(zero)',
+    1: 'x1(ra)',
+    2: 'x2(sp)',
+    3: 'x3(gp)',
+    4: 'x4(tp)',
+    5: 'x5(t0)',
+    6: 'x6(t1)',
+    7: 'x7(t2)',
+    8: 'x8(s0/fp)',
+    9: 'x9(s1)',
+    10: 'x10(a0)',
+    11: 'x11(a1)',
+    12: 'x12(a2)',
+    13: 'x13(a3)',
+    14: 'x14(a4)',
+    15: 'x15(a5)',
+    16: 'x16(a6)',
+    17: 'x17(a7)',
+    18: 'x18(s2)',
+    19: 'x19(s3)',
+    20: 'x20(s4)',
+    21: 'x21(s5)',
+    22: 'x22(s6)',
+    23: 'x23(s7)',
+    24: 'x24(s8)',
+    25: 'x25(s9)',
+    26: 'x26(s10)',
+    27: 'x27(s11)',
+    28: 'x28(t3)',
+    29: 'x29(t4)',
+    30: 'x30(t5)',
+    31: 'x31(t6)',
 }
 
 
@@ -330,23 +354,171 @@ def second_pass(lines, symbol_table):
 # ==============================================================================
 class Simulator32Bit:
     def __init__(self):
+        # 1. 创建物理设备
+        # 我们根据PPT的链接脚本示例 [cite: 277, 278]，ROM(flash)为32K, RAM为16K
+        # 为留出余量，我们都使用 64KB (0x10000)
+        self.rom = bytearray(64 * 1024)  # 64KB ROM
+        self.ram = bytearray(64 * 1024)  # 64KB RAM
+
+        # 2. 模拟外设寄存器 (根据PPT)
+        self.timer_counter = 0     # [cite: 215]
+        
+        self.uart_ctrl_reg = 0     # [cite: 221, 222]
+        self.uart_status_reg = 0   # [cite: 221, 223] (0 = 空闲, 允许发送)
+        self.uart_baud_reg = 0     # [cite: 221]
+        self.uart_txdata_reg = 0   # [cite: 221]
+        self.uart_rxdata_reg = 0   # [cite: 221]
+
+        self.gpio_leds = 0         # [cite: 218]
+        self.gpio_smgs = bytearray(8) # [cite: 219] (偏移 0x1-0x7)
+
+        # 3. 模拟器状态
         self.registers = [0] * 32  # 32个 32位寄存器
-        self.memory = bytearray(65536) # 64KB 的字节内存
         self.pc = 0
         self.previous_pc = 0
         self.halted = False
         self.pc_to_source_line_map = {} # PC (地址) -> 源代码行号
+        
+        # 4. 初始化状态
+        self.reset()
 
     def reset(self):
+        # 重置所有寄存器和PC
         self.registers = [0] * 32
-        self.memory = bytearray(len(self.memory))
         self.pc = 0
         self.previous_pc = 0
         self.halted = False
-        self.pc_to_source_line_map = {}
-        self.set_reg_value(2, len(self.memory))
-        print("Simulator Reset.")
+        
+        # 清空 RAM (ROM在加载时被写入，不需要重置)
+        self.ram = bytearray(len(self.ram))
+        
+        # 清空外设寄存器
+        self.timer_counter = 0
+        self.uart_ctrl_reg = 0
+        self.uart_status_reg = 0
+        self.uart_baud_reg = 0
+        self.uart_txdata_reg = 0
+        self.uart_rxdata_reg = 0
+        self.gpio_leds = 0
+        self.gpio_smgs = bytearray(8)
 
+        # [重要] 根据PPT的链接脚本和启动代码 [cite: 376, 212]
+        # 栈(sp)在RAM中，并且从上向下增长。
+        # 我们将sp(x2)设置为RAM的VMA地址 (0x1000_0000) 
+        # 加上我们模拟的RAM的物理大小 (64KB)。
+        RAM_VMA_START = 0x10000000
+        RAM_PHYSICAL_SIZE = len(self.ram) # 65536
+        self.set_reg_value(2, RAM_VMA_START + RAM_PHYSICAL_SIZE) 
+        
+        # self.pc_to_source_line_map 在加载时会重建
+        print("SoC Simulator Reset.")
+    def _get_device_and_offset(self, address):
+        """根据地址返回 (物理设备, 偏移量) 或 (None, None)"""
+        
+        # ROM 区 
+        if 0x0000_0000 <= address < 0x0000_0000 + len(self.rom):
+            return self.rom, address - 0x0000_0000
+        # RAM 区 
+        elif 0x1000_0000 <= address < 0x1000_0000 + len(self.ram):
+            return self.ram, address - 0x1000_0000
+            
+        # 注意: 简单起见，我们只映射了物理设备大小
+        # 一个完整的SoC会为整个256MB范围  都返回ROM/RAM
+        # 但这会导致对 0x0001_0000 (ROM外) 或 0x1001_0000 (RAM外) 的访问
+        # 错误地命中，所以我们只映射物理大小。
+        
+        # Timer 区 (只读) [cite: 215]
+        elif address == 0x2000_0000:
+            return "timer", 0
+            
+        # UART 区 [cite: 221]
+        elif 0x3000_0000 <= address <= 0x3000_0010:
+            return "uart", address - 0x3000_0000
+            
+        # GPIO 区 [cite: 217-219]
+        elif 0x4000_0000 <= address <= 0x4000_0007:
+            return "gpio", address - 0x4000_0000
+            
+        else:
+            return None, None # 未映射的地址
+
+    def mem_read(self, address, num_bytes, signed=False):
+        """
+        从内存总线读取数据。
+        num_bytes 必须是 1, 2, 或 4.
+        """
+        device, offset = self._get_device_and_offset(address)
+
+        if device == "timer":
+            # 模拟读取Timer计数器 [cite: 215]
+            if offset == 0:
+                return self.timer_counter
+            
+        elif device == "uart":
+            # 模拟读取UART寄存器 [cite: 221]
+            if offset == 0x04:   return self.uart_status_reg # UART_STATUS [cite: 223]
+            elif offset == 0x10: return self.uart_rxdata_reg # UART_RXDATA [cite: 229]
+            else: return 0 # 其他UART寄存器只写或未实现
+            
+        elif device == "gpio":
+            # 模拟读取GPIO
+            if offset == 0x00: return self.gpio_leds
+            elif 0x01 <= offset <= 0x07: return self.gpio_smgs[offset]
+            
+        elif device is not None:
+            # 从 ROM 或 RAM 读取
+            if offset + num_bytes > len(device):
+                raise MemoryError(f"Read address 0x{address:X} (offset {offset}) out of physical bounds for device")
+            data_bytes = device[offset : offset + num_bytes]
+            return int.from_bytes(data_bytes, 'little', signed=signed)
+            
+        raise MemoryError(f"Read from unmapped or invalid address 0x{address:X}")
+
+    def mem_write(self, address, value, num_bytes):
+        """
+        向内存总线写入数据。
+        num_bytes 必须是 1, 2, 或 4.
+        """
+        device, offset = self._get_device_and_offset(address)
+        
+        if device == "uart":
+            # 模拟写入UART寄存器 [cite: 221]
+            if offset == 0x00: self.uart_ctrl_reg = value; return
+            elif offset == 0x08: self.uart_baud_reg = value; return
+            elif offset == 0x0C: # UART_TXDATA [cite: 226]
+                self.uart_txdata_reg = value & 0xFF
+                # [模拟] 立即打印到控制台
+                print(f"UART_TX: {chr(self.uart_txdata_reg)}")
+                return
+                
+        elif device == "gpio":
+            # 模拟写入GPIO [cite: 217-219]
+            value_byte = value & 0xFF
+            if offset == 0x00: 
+                self.gpio_leds = value_byte; 
+                print(f"GPIO_LEDS: {self.gpio_leds:08b}")
+                return
+            elif 0x01 <= offset <= 0x07:
+                self.gpio_smgs[offset] = value_byte
+                print(f"GPIO_SMG[{offset}]: {value_byte:X}")
+                return
+
+        elif device == self.rom:
+            # 理论上ROM不可写，但加载程序时需要写入
+            if offset + num_bytes > len(device):
+                raise MemoryError(f"Write address 0x{address:X} out of physical ROM bounds")
+            data_bytes = value.to_bytes(num_bytes, 'little', signed=False)
+            device[offset : offset + num_bytes] = data_bytes
+            return
+
+        elif device == self.ram:
+            if offset + num_bytes > len(device):
+                raise MemoryError(f"Write address 0x{address:X} out of physical RAM bounds")
+            data_bytes = value.to_bytes(num_bytes, 'little', signed=False)
+            device[offset : offset + num_bytes] = data_bytes
+            return
+
+        raise MemoryError(f"Write to unmapped or invalid address 0x{address:X}")
     def get_reg_value(self, reg_idx):
         if not (0 <= reg_idx <= 31):
             raise ValueError(f"Invalid register index: {reg_idx}")
@@ -372,42 +544,44 @@ class Simulator32Bit:
         return (value & ((1 << bits) - 1)) - (1 << bits if value & sign_bit else 0)
 
     def load_program_from_binary_strings(self, binary_codes, source_line_map_list):
-        self.reset()
-        address = 0
-        for code_str in binary_codes:
-            if len(code_str) != 32:
-                print(f"Warning: Invalid machine code string: {code_str}")
-                continue
+            self.reset()
+            address = 0 # 程序从 0x00000000 (ROM) 开始 
+            
+            for code_str in binary_codes:
+                if len(code_str) != 32:
+                    print(f"Warning: Invalid machine code string: {code_str}")
+                    continue
+                
+                code_int = int(code_str, 2)
+                try:
+                    # 使用新的总线函数写入ROM
+                    self.mem_write(address, code_int, 4)
+                except Exception as e:
+                    print(f"Error loading program at 0x{address:X}: {e}")
+                    self.halted = True
+                    return
+                address += 4
 
-            # 将32位二进制字符串转为整数，再转为4字节（小端）
-            code_int = int(code_str, 2)
-            try:
-                self.memory[address : address + 4] = code_int.to_bytes(4, 'little')
-            except OverflowError:
-                print(f"Error: Machine code 0x{code_int:X} too large?")
-                pass
-            address += 4
-
-        # 构建 PC (地址) -> 行号的映射
-        self.pc_to_source_line_map = {}
-        for (instr_index, line_num) in source_line_map_list:
-            pc_address = instr_index * 4 # 每条指令4字节
-            self.pc_to_source_line_map[pc_address] = line_num
-
-        self.pc = 0
-        self.halted = False
-        print(f"Loaded {len(binary_codes)} instructions.")
+            # 构建 PC (地址) -> 行号的映射
+            self.pc_to_source_line_map = {}
+            for (instr_index, line_num) in source_line_map_list:
+                pc_address = instr_index * 4
+                self.pc_to_source_line_map[pc_address] = line_num
+            
+            self.pc = 0
+            self.halted = False
+            print(f"Loaded {len(binary_codes)} instructions into ROM.")
 
     def fetch(self):
-        if not (0 <= self.pc < len(self.memory) - 3):
-            print(f"PC out of bounds: {self.pc}")
-            self.halted = True
-            return None
-
-        # 从内存读取4字节（小端）并组装成32位指令
-        instr_bytes = self.memory[self.pc : self.pc + 4]
-        instruction_word = int.from_bytes(instr_bytes, 'little')
-        return instruction_word
+            if self.halted:
+                return None
+            try:
+                instruction_word = self.mem_read(self.pc, 4, signed=False)
+                return instruction_word
+            except MemoryError as e:
+                print(f"PC out of bounds or unmapped: {e}")
+                self.halted = True
+                return None
 
     def decode_and_execute(self, instr_word):
         if instr_word == 0: # 常见
@@ -507,29 +681,27 @@ class Simulator32Bit:
                     elif funct7 == 0b0100000: result = rs1_val >> shamt # srai
                 self.set_reg_value(rd, result)
 
-            # I-type (Load)
+# I-type (Load)
             elif opcode == 0b0000011:
                 base_addr = self.get_reg_value(rs1)
                 offset = self.sign_extend(instr_word >> 20, 12)
                 mem_addr = (base_addr + offset) & 0xFFFFFFFF
-
-                if not (0 <= mem_addr < len(self.memory)):
-                    raise MemoryError(f"Load address 0x{mem_addr:X} out of bounds")
-
-                if funct3 == 0b000: # lb
-                    val = int.from_bytes(self.memory[mem_addr:mem_addr+1], 'little', signed=True)
-                elif funct3 == 0b001: # lh
-                    val = int.from_bytes(self.memory[mem_addr:mem_addr+2], 'little', signed=True)
-                elif funct3 == 0b010: # lw
-                    val = int.from_bytes(self.memory[mem_addr:mem_addr+4], 'little', signed=True)
-                elif funct3 == 0b100: # lbu
-                    val = int.from_bytes(self.memory[mem_addr:mem_addr+1], 'little', signed=False)
-                elif funct3 == 0b101: # lhu
-                    val = int.from_bytes(self.memory[mem_addr:mem_addr+2], 'little', signed=False)
+                
+                val = 0
+                if funct3 == 0b000: # lb [cite: 164]
+                    val = self.mem_read(mem_addr, 1, signed=True)
+                elif funct3 == 0b001: # lh [cite: 165]
+                    val = self.mem_read(mem_addr, 2, signed=True)
+                elif funct3 == 0b010: # lw [cite: 166]
+                    val = self.mem_read(mem_addr, 4, signed=True)
+                elif funct3 == 0b100: # lbu [cite: 167]
+                    val = self.mem_read(mem_addr, 1, signed=False)
+                elif funct3 == 0b101: # lhu [cite: 168]
+                    val = self.mem_read(mem_addr, 2, signed=False)
                 else: raise ValueError(f"Unimplemented Load funct3={funct3:b}")
                 self.set_reg_value(rd, val)
 
-            # S-type (Store)
+# S-type (Store)
             elif opcode == 0b0100011:
                 base_addr = self.get_reg_value(rs1)
                 rs2_val = self.get_reg_value(rs2)
@@ -538,15 +710,12 @@ class Simulator32Bit:
                 imm = self.sign_extend((imm_11_5 << 5) | imm_4_0, 12)
                 mem_addr = (base_addr + imm) & 0xFFFFFFFF
 
-                if not (0 <= mem_addr < len(self.memory)):
-                    raise MemoryError(f"Store address 0x{mem_addr:X} out of bounds")
-
-                if funct3 == 0b000: # sb
-                    self.memory[mem_addr:mem_addr+1] = rs2_val.to_bytes(1, 'little', signed=True)
-                elif funct3 == 0b001: # sh
-                    self.memory[mem_addr:mem_addr+2] = rs2_val.to_bytes(2, 'little', signed=True)
-                elif funct3 == 0b010: # sw
-                    self.memory[mem_addr:mem_addr+4] = rs2_val.to_bytes(4, 'little', signed=True)
+                if funct3 == 0b000: # sb [cite: 170]
+                    self.mem_write(mem_addr, rs2_val, 1)
+                elif funct3 == 0b001: # sh [cite: 171]
+                    self.mem_write(mem_addr, rs2_val, 2)
+                elif funct3 == 0b010: # sw [cite: 172]
+                    self.mem_write(mem_addr, rs2_val, 4)
                 else: raise ValueError(f"Unimplemented Store funct3={funct3:b}")
 
             # B-type (Branch)
@@ -946,7 +1115,7 @@ class App:
             self.reset_btn.config(state=tk.DISABLED)
             self.stop_btn.config(state=tk.NORMAL)
         else:
-            can_run_or_step = not self.simulator.halted and self.simulator.pc < len(self.simulator.memory)
+            can_run_or_step = not self.simulator.halted and self.simulator.pc < len(self.simulator.rom)
             self.run_btn.config(state=tk.NORMAL if can_run_or_step else tk.DISABLED)
             self.step_btn.config(state=tk.NORMAL if can_run_or_step else tk.DISABLED)
             self.assemble_btn.config(state=tk.NORMAL)
@@ -995,9 +1164,9 @@ class App:
         addr_str = self.mem_addr_entry.get().strip()
         try:
             start_addr = int(addr_str, 16)
-            if not (0 <= start_addr < len(self.simulator.memory)):
-                self.status_label.config(text=f"错误: 地址 0x{start_addr:X} 超出内存范围")
-                return
+            # if not (0 <= start_addr < len(self.simulator.memory)):
+            #     self.status_label.config(text=f"错误: 地址 0x{start_addr:X} 超出内存范围")
+            #     return
 
             # 确保地址是4字节对齐的
             start_addr = start_addr & ~0x3
@@ -1038,28 +1207,34 @@ class App:
 
 
     def _update_memory_view(self):
-        # 更新内存视图，显示32位字
-        if not hasattr(self, 'memory_display_text') or not self.memory_display_text.winfo_exists():
-            return
+            # 更新内存视图，显示32位字
+            if not hasattr(self, 'memory_display_text') or not self.memory_display_text.winfo_exists():
+                return
 
-        self.memory_display_text.config(state='normal')
-        self.memory_display_text.delete('1.0', 'end')
+            self.memory_display_text.config(state='normal')
+            self.memory_display_text.delete('1.0', 'end')
 
-        start_addr = self.memory_view_start_addr
-        num_words_to_show = 64
-        end_addr = min(start_addr + num_words_to_show * 4, len(self.simulator.memory))
-        addr_width = 8 # 32位地址
+            start_addr = self.memory_view_start_addr
+            num_words_to_show = 64
+            end_addr = start_addr + num_words_to_show * 4
+            addr_width = 8 # 32位地址
 
-        for current_addr in range(start_addr, end_addr, 4):
-            word_bytes = self.simulator.memory[current_addr : current_addr + 4]
-            word_val = int.from_bytes(word_bytes, 'little')
+            for current_addr in range(start_addr, end_addr, 4):
+                word_val_str = ""
+                try:
+                    # [新] 使用总线读取函数
+                    word_val = self.simulator.mem_read(current_addr, 4, signed=False)
+                    word_val_str = f"{word_val:08X}"
+                except MemoryError:
+                    # 地址未映射
+                    word_val_str = "--------"
+                except Exception:
+                    word_val_str = "ERR_READ"
 
-            # 格式化显示
-            hex_val = f"{word_val:08X}"
-            line = f"0x{current_addr:0{addr_width}X}: {hex_val}\n"
-            self.memory_display_text.insert('end', line)
+                line = f"0x{current_addr:0{addr_width}X}: {word_val_str}\n"
+                self.memory_display_text.insert('end', line)
 
-        self.memory_display_text.config(state='disabled')
+            self.memory_display_text.config(state='disabled')
 
     def update_ui_state(self, is_continuous_run=False):
         # 更新寄存器
