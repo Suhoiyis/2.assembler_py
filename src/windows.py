@@ -378,7 +378,9 @@ class Simulator32Bit:
         self.previous_pc = 0
         self.halted = False
         self.pc_to_source_line_map = {} # PC (地址) -> 源代码行号
-        
+
+        self.error_message = None # [新] 添加錯誤信息變量
+
         # 4. 初始化状态
         self.reset()
 
@@ -388,6 +390,7 @@ class Simulator32Bit:
         self.pc = 0
         self.previous_pc = 0
         self.halted = False
+        self.error_message = None # [新] 重置錯誤信息
         
         # 清空 RAM (ROM在加载时被写入，不需要重置)
         self.ram = bytearray(len(self.ram))
@@ -415,28 +418,23 @@ class Simulator32Bit:
     def _get_device_and_offset(self, address):
         """根据地址返回 (物理设备, 偏移量) 或 (None, None)"""
         
-        # ROM 区 
-        if 0x0000_0000 <= address < 0x0000_0000 + len(self.rom):
+        # ROM 区
+        if 0x0000_0000 <= address < (0x0000_0000 + len(self.rom)):
             return self.rom, address - 0x0000_0000
-        # RAM 区 
-        elif 0x1000_0000 <= address < 0x1000_0000 + len(self.ram):
+        # RAM 区
+        elif 0x1000_0000 <= address < (0x1000_0000 + len(self.ram)):
             return self.ram, address - 0x1000_0000
             
-        # 注意: 简单起见，我们只映射了物理设备大小
-        # 一个完整的SoC会为整个256MB范围  都返回ROM/RAM
-        # 但这会导致对 0x0001_0000 (ROM外) 或 0x1001_0000 (RAM外) 的访问
-        # 错误地命中，所以我们只映射物理大小。
-        
-        # Timer 区 (只读) [cite: 215]
-        elif address == 0x2000_0000:
-            return "timer", 0
+        # Timer 区 [已修复] 改为 4 字节的范围
+        elif 0x2000_0000 <= address < 0x2000_0004:
+            return "timer", address - 0x2000_0000
             
-        # UART 区 [cite: 221]
-        elif 0x3000_0000 <= address <= 0x3000_0010:
+        # UART 区 (根据PPT，范围是 0x00 到 0x10)
+        elif 0x3000_0000 <= address < 0x3000_0014: # (0x10 + 4 字节)
             return "uart", address - 0x3000_0000
             
-        # GPIO 区 [cite: 217-219]
-        elif 0x4000_0000 <= address <= 0x4000_0007:
+        # GPIO 区 [已修复] (根据PPT，范围是 0x00 到 0x07)
+        elif 0x4000_0000 <= address < 0x4000_0008:
             return "gpio", address - 0x4000_0000
             
         else:
@@ -450,20 +448,85 @@ class Simulator32Bit:
         device, offset = self._get_device_and_offset(address)
 
         if device == "timer":
-            # 模拟读取Timer计数器 [cite: 215]
-            if offset == 0:
-                return self.timer_counter
+            # [已修复] Timer的读取逻辑
+            reg_val = 0
+            if offset >= 0x00 and offset < 0x04: 
+                reg_val = self.timer_counter # Timer在偏移量0处 [cite: 218]
+
+            # 按請求的字節數和偏移量返回正確的字節
+            byte_offset_in_word = address % 4
+            val_bytes = reg_val.to_bytes(4, 'little', signed=False) # Timer是无符号的
+            
+            if num_bytes == 1:
+                return int.from_bytes(val_bytes[byte_offset_in_word:byte_offset_in_word+1], 'little', signed=signed)
+            elif num_bytes == 2:
+                if byte_offset_in_word > 2: raise MemoryError(f"Unaligned 2-byte read at 0x{address:X}")
+                return int.from_bytes(val_bytes[byte_offset_in_word:byte_offset_in_word+2], 'little', signed=signed)
+            elif num_bytes == 4:
+                if byte_offset_in_word != 0: raise MemoryError(f"Unaligned 4-byte read at 0x{address:X}")
+                return int.from_bytes(val_bytes, 'little', signed=signed)
             
         elif device == "uart":
-            # 模拟读取UART寄存器 [cite: 221]
-            if offset == 0x04:   return self.uart_status_reg # UART_STATUS [cite: 223]
-            elif offset == 0x10: return self.uart_rxdata_reg # UART_RXDATA [cite: 229]
-            else: return 0 # 其他UART寄存器只写或未实现
+            # 模拟读取UART寄存器
+            reg_val = 0
+            if offset >= 0x00 and offset < 0x04: reg_val = self.uart_ctrl_reg
+            elif offset >= 0x04 and offset < 0x08: reg_val = self.uart_status_reg
+            elif offset >= 0x08 and offset < 0x0C: reg_val = self.uart_baud_reg
+            elif offset >= 0x0C and offset < 0x10: reg_val = self.uart_txdata_reg
+            elif offset >= 0x10 and offset < 0x14: reg_val = self.uart_rxdata_reg
+            # else: reg_val = 0 (默認為0)
+
+            # 按請求的字節數和偏移量返回正確的字節
+            byte_offset_in_word = address % 4
+            val_bytes = reg_val.to_bytes(4, 'little')
+            
+            if num_bytes == 1:
+                return int.from_bytes(val_bytes[byte_offset_in_word:byte_offset_in_word+1], 'little', signed=signed)
+            elif num_bytes == 2:
+                return int.from_bytes(val_bytes[byte_offset_in_word:byte_offset_in_word+2], 'little', signed=signed)
+            elif num_bytes == 4:
+                return int.from_bytes(val_bytes, 'little', signed=signed)
             
         elif device == "gpio":
-            # 模拟读取GPIO
-            if offset == 0x00: return self.gpio_leds
-            elif 0x01 <= offset <= 0x07: return self.gpio_smgs[offset]
+            # [已修复] GPIO的读取逻辑
+            # [cite_start]根据PPT，GPIO寄存器是按字节偏移的 [cite: 221, 222]
+            reg_val_word = 0
+            
+            if offset >= 0x00 and offset < 0x04:
+                # 访问第一个字 (0x40000000 - 0x40000003)
+                # [cite_start]LSB (offset 0) = leds [cite: 221]
+                # [cite_start]Offset 1 = smg[1] [cite: 222]
+                # Offset 2 = smg[2]
+                # MSB (offset 3) = smg[3]
+                reg_val_word = (self.gpio_smgs[3] << 24) | \
+                               (self.gpio_smgs[2] << 16) | \
+                               (self.gpio_smgs[1] << 8)  | \
+                                self.gpio_leds
+                                
+            elif offset >= 0x04 and offset < 0x08:
+                # 访问第二个字 (0x40000004 - 0x40000007)
+                # LSB (offset 4) = smg[4]
+                # Offset 5 = smg[5]
+                # Offset 6 = smg[6]
+                # [cite_start]MSB (offset 7) = smg[7] [cite: 222]
+                reg_val_word = (self.gpio_smgs[7] << 24) | \
+                               (self.gpio_smgs[6] << 16) | \
+                               (self.gpio_smgs[5] << 8)  | \
+                                self.gpio_smgs[4]
+            # else: reg_val_word = 0 (默認為0)
+
+            # 按請求的字節數和偏移量返回正確的字節
+            byte_offset_in_word = address % 4
+            val_bytes = reg_val_word.to_bytes(4, 'little', signed=False) # GPIO是无符号的
+            
+            if num_bytes == 1:
+                return int.from_bytes(val_bytes[byte_offset_in_word:byte_offset_in_word+1], 'little', signed=signed)
+            elif num_bytes == 2:
+                if byte_offset_in_word > 2: raise MemoryError(f"Unaligned 2-byte read at 0x{address:X}")
+                return int.from_bytes(val_bytes[byte_offset_in_word:byte_offset_in_word+2], 'little', signed=signed)
+            elif num_bytes == 4:
+                if byte_offset_in_word != 0: raise MemoryError(f"Unaligned 4-byte read at 0x{address:X}")
+                return int.from_bytes(val_bytes, 'little', signed=signed)
             
         elif device is not None:
             # 从 ROM 或 RAM 读取
@@ -488,7 +551,7 @@ class Simulator32Bit:
             elif offset == 0x0C: # UART_TXDATA [cite: 226]
                 self.uart_txdata_reg = value & 0xFF
                 # [模拟] 立即打印到控制台
-                print(f"UART_TX: {chr(self.uart_txdata_reg)}")
+                print(f"UART_TX: {self.uart_txdata_reg}")
                 return
                 
         elif device == "gpio":
@@ -580,6 +643,7 @@ class Simulator32Bit:
                 return instruction_word
             except MemoryError as e:
                 print(f"PC out of bounds or unmapped: {e}")
+                self.error_message = error_msg # [新] 存儲錯誤信息
                 self.halted = True
                 return None
 
@@ -666,19 +730,37 @@ class Simulator32Bit:
                 rs1_val = self.get_reg_value(rs1)
                 imm = self.sign_extend(instr_word >> 20, 12)
                 result = 0
-                if funct3 == 0b000: result = rs1_val + imm # addi
-                elif funct3 == 0b010: result = 1 if rs1_val < imm else 0 # slti
-                elif funct3 == 0b011: result = 1 if (rs1_val & 0xFFFFFFFF) < (imm & 0xFFFFFFFF) else 0 # sltiu
-                elif funct3 == 0b100: result = rs1_val ^ imm # xori
-                elif funct3 == 0b110: result = rs1_val | imm # ori
-                elif funct3 == 0b111: result = rs1_val & imm # andi
+
+                if funct3 == 0b000: # addi
+                    result = rs1_val + imm
+                elif funct3 == 0b010: # slti
+                    result = 1 if rs1_val < imm else 0
+                elif funct3 == 0b011: # sltiu
+                    result = 1 if (rs1_val & 0xFFFFFFFF) < (imm & 0xFFFFFFFF) else 0
+                elif funct3 == 0b100: # xori
+                    result = rs1_val ^ imm
+                elif funct3 == 0b110: # ori
+                    result = rs1_val | imm
+                elif funct3 == 0b111: # andi
+                    result = rs1_val & imm
                 elif funct3 == 0b001: # slli
-                    shamt = (instr_word >> 20) & 0x1F
-                    result = rs1_val << shamt
-                elif funct3 == 0b101:
-                    shamt = (instr_word >> 20) & 0x1F
-                    if funct7 == 0b0000000: result = (rs1_val & 0xFFFFFFFF) >> shamt # srli
-                    elif funct7 == 0b0100000: result = rs1_val >> shamt # srai
+                    # 必須檢查 funct7
+                    if funct7 == 0b0000000:
+                        shamt = (instr_word >> 20) & 0x1F # shamt 只有 5 位
+                        result = rs1_val << shamt
+                    else:
+                        raise ValueError(f"Invalid slli with funct7={funct7:b}")
+                elif funct3 == 0b101: # srli/srai
+                    shamt = (instr_word >> 20) & 0x1F # shamt 只有 5 位
+                    if funct7 == 0b0000000: # srli
+                        result = (rs1_val & 0xFFFFFFFF) >> shamt
+                    elif funct7 == 0b0100000: # srai
+                        result = rs1_val >> shamt
+                    else:
+                        raise ValueError(f"Invalid srli/srai with funct7={funct7:b}")
+                else:
+                    raise ValueError(f"Unimplemented I-Type funct3={funct3:b}")
+                    
                 self.set_reg_value(rd, result)
 
 # I-type (Load)
@@ -727,17 +809,24 @@ class Simulator32Bit:
                 imm_4_1 = (instr_word >> 8) & 0xF
                 imm_11 = (instr_word >> 7) & 1
                 imm = self.sign_extend((imm_12 << 12) | (imm_11 << 11) | (imm_10_5 << 5) | (imm_4_1 << 1), 13)
-
+                
                 branch_taken = False
-                if funct3 == 0b000 and rs1_val == rs2_val: branch_taken = True # beq
-                elif funct3 == 0b001 and rs1_val != rs2_val: branch_taken = True # bne
-                elif funct3 == 0b100 and rs1_val < rs2_val: branch_taken = True # blt
-                elif funct3 == 0b101 and rs1_val >= rs2_val: branch_taken = True # bge
-                elif funct3 == 0b110 and (rs1_val & 0xFFFFFFFF) < (rs2_val & 0xFFFFFFFF): branch_taken = True # bltu
-                elif funct3 == 0b111 and (rs1_val & 0xFFFFFFFF) >= (rs2_val & 0xFFFFFFFF): branch_taken = True # bgeu
-
+                if funct3 == 0b000: # beq
+                    branch_taken = (rs1_val == rs2_val)
+                elif funct3 == 0b001: # bne
+                    branch_taken = (rs1_val != rs2_val)
+                elif funct3 == 0b100: # blt
+                    branch_taken = (rs1_val < rs2_val)
+                elif funct3 == 0b101: # bge
+                    branch_taken = (rs1_val >= rs2_val)
+                elif funct3 == 0b110: # bltu
+                    branch_taken = ((rs1_val & 0xFFFFFFFF) < (rs2_val & 0xFFFFFFFF))
+                elif funct3 == 0b111: # bgeu
+                    branch_taken = ((rs1_val & 0xFFFFFFFF) >= (rs2_val & 0xFFFFFFFF))
+                
                 if branch_taken:
                     next_pc = (self.pc + imm) & 0xFFFFFFFF
+            # [結束替換]
 
             # U-type (LUI, AUIPC)
             elif opcode == 0b0110111: # lui
@@ -773,7 +862,9 @@ class Simulator32Bit:
             self.pc = next_pc
 
         except Exception as e:
-            print(f"执行错误: PC=0x{self.pc:08X}, Instr=0x{instr_word:08X}, Error={e}")
+            error_msg = f"执行错误: PC=0x{self.pc:08X}, Instr=0x{instr_word:08X}, Error={e}"
+            print(error_msg)
+            self.error_message = error_msg # [新] 存儲錯誤信息
             import traceback
             traceback.print_exc()
             self.halted = True
@@ -837,7 +928,7 @@ class App:
         code_area_frame.rowconfigure(1, weight=1)
         code_area_frame.columnconfigure(1, weight=1)
 
-        ttk.Label(code_area_frame, text="汇编代码 (RV32I):").grid(row=0, column=0, columnspan=3, sticky=tk.W, pady=(0,5))
+        ttk.Label(code_area_frame, text="汇编代码:").grid(row=0, column=0, columnspan=3, sticky=tk.W, pady=(0,5))
 
         self.line_numbers_text = tk.Text(code_area_frame, width=4, padx=1, takefocus=0, borderwidth=0,background='lightgrey', state='disabled', wrap='none',font=self.actual_code_font,spacing1=0, spacing2=0, spacing3=0)
         self.line_numbers_text.grid(row=1, column=0, sticky='ns')
@@ -894,52 +985,75 @@ class App:
         # --- 右侧面板 ---
         right_pane = ttk.Frame(main_frame, padding=(5, 0, 5, 5))
         right_pane.grid(row=0, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=(0, 5))
-        main_frame.columnconfigure(1, weight=2) # 给右侧面板更大权重
-        right_pane.columnconfigure(0, weight=1) # 寄存器
-        right_pane.columnconfigure(1, weight=1) # 内存
-        right_pane.rowconfigure(1, weight=1)
+        main_frame.columnconfigure(1, weight=2) # 保持右侧面板的权重
 
+        # [修改] right_pane 改为1列, 多行
+        right_pane.columnconfigure(0, weight=1)
+        right_pane.rowconfigure(1, weight=0) # [新] 寄存器行，不拉伸
+        right_pane.rowconfigure(4, weight=1) # [新] 内存行，拉伸
+        
         # --- 寄存器视图 (32个) ---
-        ttk.Label(right_pane, text="寄存器:").grid(row=0, column=0,sticky=tk.NW, padx=(0,5), pady=(0,2))
+        ttk.Label(right_pane, text="寄存器:").grid(row=0, column=0, sticky=tk.NW, padx=(0,5), pady=(0,2))
         self.reg_frame = ttk.Frame(right_pane)
-        self.reg_frame.grid(row=1, column=0, sticky='nsew', padx=(0,5))
+        self.reg_frame.grid(row=1, column=0, sticky='new', padx=(0,5)) # [修改] 放在第1行，第0列
         self.reg_labels = {}
         for i in range(32):
             reg_name = self.reg_num_to_name.get(i, f'x{i}')
             # 分两列显示
             row_idx = i % 16
             col_idx = (i // 16) * 2
-
+            
             ttk.Label(self.reg_frame, text=f"{reg_name:<10}").grid(row=row_idx, column=col_idx, sticky=tk.W, padx=2, pady=1)
-            self.reg_labels[i] = ttk.Label(self.reg_frame, text="0 (0x00000000)", width=20, relief=tk.GROOVE, anchor=tk.W)
+            self.reg_labels[i] = ttk.Label(self.reg_frame, text="0 (0x00000000)", width=25, relief=tk.GROOVE, anchor=tk.W)
             self.reg_labels[i].grid(row=row_idx, column=col_idx + 1, sticky=tk.W, padx=2, pady=1)
-
+        
         # PC 单独显示
         self.pc_label_title = ttk.Label(self.reg_frame, text="PC:")
         self.pc_label_title.grid(row=16, column=0, sticky=tk.W, padx=2, pady=(5,1))
-        self.pc_label_val = ttk.Label(self.reg_frame, text="0 (0x00000000)", width=20, relief=tk.GROOVE, anchor=tk.W)
+        self.pc_label_val = ttk.Label(self.reg_frame, text="0 (0x00000000)", width=25, relief=tk.GROOVE, anchor=tk.W)
         self.pc_label_val.grid(row=16, column=1, sticky=tk.W, padx=2, pady=(5,1))
 
+        separator = ttk.Separator(right_pane, orient='horizontal')
+        separator.grid(row=2, column=0, sticky='ew', padx=5, pady=10)
 
-        # --- 内存视图 (32位) ---
-        ttk.Label(right_pane, text="内存视图 (32位字):").grid(row=0, column=1, sticky=tk.NW, padx=(5,0), pady=(0,2))
+        # --- 内存视图 (8位字節) ---
+        ttk.Label(right_pane, text="内存视图:").grid(row=3, column=0, sticky=tk.NW, padx=(5,0), pady=(10,2)) # [修改] 放在第2行, 增加上邊距
+
         self.mem_frame = ttk.Frame(right_pane)
-        self.mem_frame.grid(row=1, column=1, sticky='nsew', padx=(5,0))
+        self.mem_frame.grid(row=4, column=0, sticky='nsew', padx=(5,0)) # [修改] 放在第3行
         self.mem_frame.rowconfigure(2, weight=1)
         self.mem_frame.columnconfigure(0, weight=1)
 
         mem_nav_frame = ttk.Frame(self.mem_frame)
         mem_nav_frame.grid(row=0, column=0, columnspan=2, sticky='ew', pady=(0,5))
+
+        # [新] 添加內存視圖的列標題
+        # (前面的空格用於和地址欄對齊)
+        header_str = "                              0     1     2     3     4     5     6     7      8     9    A    B    C    D    E    F"
+        mem_header_label = ttk.Label(self.mem_frame, text=header_str, font=('Times New Roman', 11, 'bold'))
+        mem_header_label.grid(row=1, column=0, columnspan=2, sticky='ew', padx=(0, 15)) # 放在第 1 行
+
         ttk.Label(mem_nav_frame, text="地址(Hex):").pack(side=tk.LEFT, padx=(0,2))
         self.mem_addr_entry = ttk.Entry(mem_nav_frame, width=10)
         self.mem_addr_entry.pack(side=tk.LEFT, padx=2)
         self.mem_addr_entry.insert(0, "0") # 默认显示地址 0
         ttk.Button(mem_nav_frame, text="跳转", command=self.go_to_memory_address).pack(side=tk.LEFT, padx=2)
 
-        self.memory_display_text = tk.Text(self.mem_frame, wrap='none', undo=False, font=self.actual_code_font, width=30)
-        self.memory_display_text.grid(row=1, column=0, sticky='nsew')
+# 内存显示文本区 (tk.Text)
+        self.memory_display_text = tk.Text(self.mem_frame, wrap='none', undo=False,
+                                           font=self.actual_code_font,
+                                           width=62) # [新] 重新设置固定宽度以匹配 "地址 + 16字节"
+        self.memory_display_text.grid(row=2, column=0, sticky='nsew')
+
+        # 内存显示区的垂直滚动条
         mem_v_scrollbar = ttk.Scrollbar(self.mem_frame, orient="vertical", command=self.memory_display_text.yview)
-        mem_v_scrollbar.grid(row=1, column=1, sticky='ns')
+        mem_v_scrollbar.grid(row=2, column=1, sticky='ns')
+        
+        # [已移除] 水平滚动条
+        # mem_h_scrollbar = ttk.Scrollbar(self.mem_frame, orient="horizontal", command=self.memory_display_text.xview)
+        # mem_h_scrollbar.grid(row=2, column=0, sticky='ew')
+
+        # [修改] 只关联垂直滚动条
         self.memory_display_text.config(yscrollcommand=mem_v_scrollbar.set)
 
         # --- 初始化 ---
@@ -1207,35 +1321,59 @@ class App:
 
 
     def _update_memory_view(self):
-            # 更新内存视图，显示32位字
-            if not hasattr(self, 'memory_display_text') or not self.memory_display_text.winfo_exists():
-                return
+        # 更新内存视图为 "Hex Dump" 格式 (無ASCII)
+        if not hasattr(self, 'memory_display_text') or not self.memory_display_text.winfo_exists():
+            return
 
-            self.memory_display_text.config(state='normal')
-            self.memory_display_text.delete('1.0', 'end')
+        self.memory_display_text.config(state='normal')
+        self.memory_display_text.delete('1.0', 'end')
 
-            start_addr = self.memory_view_start_addr
-            num_words_to_show = 64
-            end_addr = start_addr + num_words_to_show * 4
-            addr_width = 8 # 32位地址
+        start_addr = self.memory_view_start_addr
+        # 确保地址从16字节对齐处开始
+        start_addr = start_addr & ~0xF 
+        
+        num_rows = 32 # 一次显示32行
+        addr_width = 8 # 32位地址
 
-            for current_addr in range(start_addr, end_addr, 4):
-                word_val_str = ""
+        for row in range(num_rows):
+            current_base_addr = start_addr + (row * 16)
+            
+            # 1. 格式化地址列
+            addr_str = f"0x{current_base_addr:0{addr_width}X}: "
+            
+            hex_bytes_str = ""
+            bytes_for_this_row = []
+            
+            # 2. 读取本行的16个字节
+            for i in range(16):
+                byte_addr = current_base_addr + i
                 try:
-                    # [新] 使用总线读取函数
-                    word_val = self.simulator.mem_read(current_addr, 4, signed=False)
-                    word_val_str = f"{word_val:08X}"
+                    byte_val = self.simulator.mem_read(byte_addr, 1, signed=False)
+                    bytes_for_this_row.append(byte_val)
                 except MemoryError:
-                    # 地址未映射
-                    word_val_str = "--------"
+                    bytes_for_this_row.append(None) # 未映射地址
                 except Exception:
-                    word_val_str = "ERR_READ"
+                    bytes_for_this_row.append(-1)   # 读取错误
+            
+            # 3. 格式化十六进制列
+            for i, byte_val in enumerate(bytes_for_this_row):
+                if i == 8:
+                    hex_bytes_str += " " # 在中間加一個空格
 
-                line = f"0x{current_addr:0{addr_width}X}: {word_val_str}\n"
-                self.memory_display_text.insert('end', line)
+                if byte_val is None:
+                    hex_bytes_str += "-- "
+                elif byte_val == -1:
+                    hex_bytes_str += "ER "
+                else:
+                    hex_bytes_str += f"{byte_val:02X} "
+            
+            # 4. [已移除] ASCII列
+            
+            # 5. 合并并插入行
+            line = f"{addr_str} {hex_bytes_str}\n" # <-- 已移除 ascii_dump_str
+            self.memory_display_text.insert('end', line)
 
-            self.memory_display_text.config(state='disabled')
-
+        self.memory_display_text.config(state='disabled')
     def update_ui_state(self, is_continuous_run=False):
         # 更新寄存器
         for i in range(32):
@@ -1274,43 +1412,63 @@ class App:
         self._execute_next_instruction_in_run_mode()
 
     def _execute_next_instruction_in_run_mode(self):
+        # 1. 检查是否应该停止 (由用户点击停止、模拟器已停止)
         if not self.is_running_continuously or self.simulator.halted:
-            self.is_running_continuously = False
+            self.is_running_continuously = False # 确保标志位正确
+
             if self._continuous_run_job:
                 self.root.after_cancel(self._continuous_run_job)
                 self._continuous_run_job = None
 
+            # 检查状态，避免覆盖“断点暂停”或“手动停止”
             current_status = self.status_label.cget("text")
             if "暂停" not in current_status and "停止" not in current_status:
-                final_status = "程序执行完毕." if self.simulator.halted else "模拟器已停止."
-                self.status_label.config(text=final_status)
+                
+                # [新] 区分错误还是正常结束
+                if self.simulator.error_message:
+                    self.status_label.config(text=f"模拟器因错误而停止!")
+                else:
+                    self.status_label.config(text="程序执行完毕。")
 
-            self._update_button_states()
-            self.update_ui_state()
-            return
+            self._update_button_states() # 更新所有按钮
+            self.update_ui_state()       # 更新UI显示（寄存器、PC、高亮等）
+            return # 结束本次执行
 
-        # 断点检查
+        # 2. 断点检查 (在执行指令之前)
         current_pc = self.simulator.pc
         if current_pc in self.simulator.pc_to_source_line_map:
             source_line_num = self.simulator.pc_to_source_line_map[current_pc]
             if source_line_num in self.breakpoints:
-                self.is_running_continuously = False
+                # 命中断点
+                self.is_running_continuously = False # 停止连续运行
                 self.status_label.config(text=f"在断点处暂停: 第 {source_line_num} 行 (PC=0x{current_pc:08X})")
-                self._update_button_states()
-                self.update_ui_state()
+                self._update_button_states() # 更新按钮状态（启用"单步"、"执行"等）
+                self.update_ui_state()       # 刷新UI以高亮断点行
+                # 暂停执行，不调用 step() 也不安排下一次 after()
                 return
 
+        # 3. 如果没有命中断点，则执行一步
+        # simulator.step() 会执行指令并更新PC。如果执行后出错或结束，它会返回 False。
         if not self.simulator.step():
-            self.is_running_continuously = False
-            self.status_label.config(text="模拟器执行时遇到错误或结束。")
+            self.is_running_continuously = False # 模拟器内部停止了
+            
+            # [新] 区分错误还是正常结束
+            if self.simulator.error_message:
+                self.status_label.config(text=f"模拟器因错误而停止!")
+            else:
+                self.status_label.config(text="程序执行完毕。")
+
             self._update_button_states()
             self.update_ui_state()
             return
 
-        self.update_ui_state(is_continuous_run=True)
+        # 4. 更新UI并安排下一次执行
+        # (节流, is_continuous_run=True)
+        self.update_ui_state(is_continuous_run=True) 
 
+        # 再次检查，以防 step() 操作改变了状态
         if self.is_running_continuously and not self.simulator.halted:
-            delay_ms = 1 # 32位很快，延迟调低
+            delay_ms = 1  # 32位很快，延迟调低
             self._continuous_run_job = self.root.after(delay_ms, self._execute_next_instruction_in_run_mode)
 
     def stop_continuous_run(self):
