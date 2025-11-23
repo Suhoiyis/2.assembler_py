@@ -1,4 +1,3 @@
-# windows_32bit.py
 import tkinter as tk
 from tkinter import filedialog, scrolledtext, ttk, font
 import re
