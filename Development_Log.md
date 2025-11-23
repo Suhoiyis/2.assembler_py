@@ -1,10 +1,48 @@
-## *最后更新：2025/09/30*  
-##### 更新内容：
+## *最后更新：2025/11/23*
+#### 目前的功能：
+
+~~继续增加了一些uart的.txt~~
+
+#### __写了可视化执行窗口`windows.py`__
+
+增加`src/C`文件夹,下辖：
+
+> 几个.c文件  
+> `start.S`  
+> `os.ld`  
+>  ~~ 一个`.bat` windows下直接执行的脚本  ~~
+
+同时为了解释这些新增了`RISCV-GCC_Manual.md`说明书
+
+
+使用[RISC-V GCC应用开发工具链](https://github.com/ilg-archived/riscv-none-gcc/releases)  
+交叉编译是指在一个平台上生成另一个平台的可执行代码的过程  
+使用预编译工具链。gnu-mcu-eclipse-riscv32-none-gcc-8.2.0-2.2-20190521-0004-win64 是一个由 GNU MCU Eclipse 项目提供的、适用于 Windows 64 位系统的 RISC-V 32 位交叉编译工具链。这个工具链主要用于裸机嵌入式开发（bare-metal embedded development），适用于开发基于 RISC-V 架构的微控制器  
+
+使用流程：  
+安装好工具链后（ ___目标.c文件,start.S,os.ld在同一文件夹下___）
+
+1.生成目标程序`.elf`  
+`riscv-none-embed-gcc -nostdlib -fno-builtin -march=rv32im -T os.ld  -o main.elf main.c start.S`
+
+2.生成二进制文件`.bin`  
+`riscv-none-embed-objcopy -O binary main.elf main.bin`  
+
+上板
+
+.c文件是ppt里要求三个的：`流水LED灯` `时钟显示` `UART数据接收/显示`  
+
+
+
+***
+
+## *更新时间：2025/09/30*  
+##### 目前的功能：
 上传项目指导总ppt  
 创建uart文件夹，  
 > 内含：
-> receive.txt:(rx)接收
-> transmit.txt:(tx)发送
+> receive.txt:(rx)接收  
+> transmit.txt:(tx)发送  
 uart串口需要一些寄存器来指导接收和发送数据
 
 ***
