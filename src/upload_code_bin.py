@@ -8,7 +8,7 @@ SERIAL_PORT = "COM9"
 BAUD_RATE = 9600
 
 # 注意路径地址对应
-CODE_FILE = "led.bin"
+CODE_FILE = "input.bin"
 
 
 def load_instructions(file_path):
