@@ -1,80 +1,64 @@
 /*
- * 时钟显示
- * 从 Timer (0x20000000) 读取毫秒数
- * 将毫秒数转换为 时:分:秒
- * 将 时:分:秒 的 6 个数字显示在 GPIO 的 6 个数码管上 (0x40000001 - 0x40000006)
+ * Timer 终极修复版 (256MB RAM + 毫秒计数)
  */
 
-// Timer : 1 个 32位 毫秒计数器
-// 地址: 0x20000000, 偏移: 0x0
-#define TIMER_MS (*(volatile unsigned int*)0x20000000)
+// === 硬件地址 ===
+#define TIMER_BASE      0x20000000
+#define TIMER_COUNTER   (*(volatile unsigned int *)(TIMER_BASE + 0x00))
 
-// GPIO : 6 个 8位 寄存器 (0x1 到 0x6)
-// 基地址: 0x40000000
-#define SMG_DISPLAY_1 (*(volatile unsigned char*)0x40000001)
-#define SMG_DISPLAY_2 (*(volatile unsigned char*)0x40000002)
-#define SMG_DISPLAY_3 (*(volatile unsigned char*)0x40000003)
-#define SMG_DISPLAY_4 (*(volatile unsigned char*)0x40000004)
-#define SMG_DISPLAY_5 (*(volatile unsigned char*)0x40000005)
-#define SMG_DISPLAY_6 (*(volatile unsigned char*)0x40000006)
+#define GPIO_BASE       0x40000000
+#define SMG_PTR         ((volatile unsigned char *)(GPIO_BASE + 0x01))
+#define LED_REG         (*(volatile unsigned char *)(GPIO_BASE + 0x00))
 
+// 主逻辑函数
+void timer_main() {
+    LED_REG = 0xFF; // 点亮 LED
 
-// unsigned char get_7seg_code(unsigned int digit) {
-//     // 7-segment 编码 (0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
-//     // 索引 (index) 对应数字
-//     const unsigned char seg_codes[10] = {
-//         0x3F, // 0
-//         0x06, // 1
-//         0x5B, // 2
-//         0x4F, // 3
-//         0x66, // 4
-//         0x6D, // 5
-//         0x7D, // 6
-//         0x07, // 7
-//         0x7F, // 8
-//         0x6F  // 9
-//     };
-
-//     if (digit > 9) {
-//         return 0x00; // 错误或关闭
-//     }
-//     return seg_codes[digit];
-// }
-
-
-void start_kernel() {
-    unsigned int time_ms;
-    unsigned int total_seconds;
-    unsigned int hours, minutes, seconds;
-
-    unsigned int s1, s2, m1, m2, h1, h2; // 6 个数字
-
-    // 无限循环
     while (1) {
-        // 读取毫秒数
-        time_ms = TIMER_MS;
+        // 1. 读取毫秒数
+        // 硬件计数器直接返回毫秒
+        unsigned int current_ms = TIMER_COUNTER;
 
-        // 毫秒转换时分秒
-        total_seconds = time_ms / 1000;
-        seconds = total_seconds % 60;
-        minutes = (total_seconds / 60) % 60;
-        hours   = (total_seconds / 3600) % 100; 
+        // 2. 转换为总秒数
+        unsigned int total_seconds = current_ms / 1000;
 
-        // 时分秒 分解 6 个单独数字
-        s2 = seconds % 10; // 秒 (个位)
-        s1 = seconds / 10; // 秒 (十位)
-        m2 = minutes % 10; // 分 (个位)
-        m1 = minutes / 10; // 分 (十位)
-        h2 = hours   % 10; // 时 (个位)
-        h1 = hours   / 10; // 时 (十位)
+        // 3. 计算 HH:MM:SS
+        unsigned int seconds = total_seconds % 60;
+        unsigned int minutes = (total_seconds / 60) % 60;
+        unsigned int hours   = (total_seconds / 3600) % 100;
 
-        // 6 个数字写入 6 个数码管
-        // (顺序 H1 H2 : M1 M2 : S1 S2)
-        SMG_DISPLAY_1 = h1;
-        SMG_DISPLAY_2 = h2;
-        SMG_DISPLAY_3 = m1;
-        SMG_DISPLAY_4 = m2;
-        SMG_DISPLAY_5 = s1;
-        SMG_DISPLAY_6 = s2;
+        // 4. 显示 (从左到右: HH MM SS)
+        // 假设 SEG1(PTR[0]) 是最左边
+
+        // 小时
+        SMG_PTR[0] = hours / 10;
+        SMG_PTR[1] = hours % 10;
+        // 分钟
+        SMG_PTR[2] = minutes / 10;
+        SMG_PTR[3] = minutes % 10;
+        // 秒
+        SMG_PTR[4] = seconds / 10;
+        SMG_PTR[5] = seconds % 10;
+
+        // 5. LED 心跳
+        if ((current_ms % 1000) < 500) {
+            LED_REG = 0x0F;
+        } else {
+            LED_REG = 0xF0;
+        }
+
+        // 6. 软件延时 (防止数码管刷新过快)
+        // 现代 CPU 很快，如果不加延时，数码管可能会有重影
+        for (volatile int i = 0; i < 5000; i++);
     }
+}
+
+// 启动入口
+void start_kernel() {
+    // RAM Start (0x10000000) + 256MB (0x10000000) = 0x20000000
+    // 这里的 0x20000000 是 "栈底" (Stack Bottom)，向下生长
+    asm volatile("li sp, 0x20000000");
+
+    // 跳转主逻辑
+    timer_main();
 }
