@@ -8,18 +8,26 @@ _（上学期内容[assembler_py](https://github.com/Suhoiyis/assembler_py/tree/
 与上学期的不同之处于：  
 1.现在使用32位机器码  
 2.拓展了指令集的丰富度
+3.使用`RISC-V GCC应用开发工具链`
 ***
 代码内容仍旧在`src`文件夹里  
 使用说明参见`manual.md`  
 开发日志参见`Development_Log.md`  
 输入输出数据在`data`文件夹里  
 输入数据为`input.txt`，输出数据为`output.txt`  
-素材在`material`文件夹里
+素材在`material`文件夹里  
+RISC-V GCC应用开发工具链相关内容在`src/C`
 ***
 
 ```
 <2.assembler_py>/
  ├── 📁 src/
+ |   ├── 📁 C/
+ |   |    ├── start.S         # 汇编启动代码  
+ |   |    ├── os.ld           # 链接器脚本
+ |   |    └── ***.c(s)        # ppt要求的三个.c文件
+ |   | 
+ |   ├── 🐍 windows.py        # 汇编器的可视化窗口界面  
  │   └── 🐍 assembler.py      # Python 汇编器脚本
  │
  ├── 📁 data/
@@ -34,7 +42,8 @@ _（上学期内容[assembler_py](https://github.com/Suhoiyis/assembler_py/tree/
  │   ├── 📊 一个32位....ppt    # 项目总ppt
  │   └── 📊 指令.ppt          # 指令演示文稿
  │
- ├── 📘 manual.md             # 使用说明
+ ├── 📘 manual.md             # .py汇编器使用说明
+ ├── 📘 RISCV-GCC_Manual.md   # RISC-V GCC应用开发工具链使用说明
  ├── 📝 Development_Log.md    # 开发日志
  └── 📖 README.md             # 项目说明文件（本文件）
 ```
