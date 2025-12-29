@@ -1,64 +1,52 @@
 /*
- * Timer 终极修复版 (256MB RAM + 毫秒计数)
+ * Timer "汇编风格" C语言版
+ *
+ * 策略:
+ * 1. 模仿汇编代码的寄存器使用方式。
+ * 2. 尽量减少中间变量，直接计算直接写入。
+ * 3. 使用裸函数启动。
  */
 
-// === 硬件地址 ===
 #define TIMER_BASE      0x20000000
 #define TIMER_COUNTER   (*(volatile unsigned int *)(TIMER_BASE + 0x00))
 
 #define GPIO_BASE       0x40000000
-#define SMG_PTR         ((volatile unsigned char *)(GPIO_BASE + 0x01))
+#define SMG_BASE        ((volatile unsigned char *)(GPIO_BASE + 0x01))
 #define LED_REG         (*(volatile unsigned char *)(GPIO_BASE + 0x00))
 
-// 主逻辑函数
+// 模仿汇编，不定义多余变量
 void timer_main() {
     LED_REG = 0xFF; // 点亮 LED
 
     while (1) {
-        // 1. 读取毫秒数
-        // 硬件计数器直接返回毫秒
-        unsigned int current_ms = TIMER_COUNTER;
+        // 1. 读取并计算总秒数
+        // 寄存器 t0, t1 级别
+        unsigned int total_seconds = TIMER_COUNTER / 1000;
 
-        // 2. 转换为总秒数
-        unsigned int total_seconds = current_ms / 1000;
+        SMG_BASE[4] = total_seconds % 60 / 10;
+        SMG_BASE[5] = total_seconds % 60 % 10;
 
-        // 3. 计算 HH:MM:SS
-        unsigned int seconds = total_seconds % 60;
-        unsigned int minutes = (total_seconds / 60) % 60;
-        unsigned int hours   = (total_seconds / 3600) % 100;
+        SMG_BASE[2] = (total_seconds / 60) % 60 / 10;
+        SMG_BASE[3] = (total_seconds / 60) % 60 % 10;
 
-        // 4. 显示 (从左到右: HH MM SS)
-        // 假设 SEG1(PTR[0]) 是最左边
+        SMG_BASE[0] = (total_seconds / 3600) % 100 / 10;
+        SMG_BASE[1] = (total_seconds / 3600) % 100 % 10;
 
-        // 小时
-        SMG_PTR[0] = hours / 10;
-        SMG_PTR[1] = hours % 10;
-        // 分钟
-        SMG_PTR[2] = minutes / 10;
-        SMG_PTR[3] = minutes % 10;
-        // 秒
-        SMG_PTR[4] = seconds / 10;
-        SMG_PTR[5] = seconds % 10;
-
-        // 5. LED 心跳
-        if ((current_ms % 1000) < 500) {
-            LED_REG = 0x0F;
-        } else {
+        // --- LED ---
+        if ((total_seconds) & 1) { // 奇数秒
             LED_REG = 0xF0;
+        } else {
+            LED_REG = 0x0F;
         }
-
-        // 6. 软件延时 (防止数码管刷新过快)
-        // 现代 CPU 很快，如果不加延时，数码管可能会有重影
-        for (volatile int i = 0; i < 5000; i++);
     }
 }
 
 // 启动入口
 void start_kernel() {
-    // RAM Start (0x10000000) + 256MB (0x10000000) = 0x20000000
-    // 这里的 0x20000000 是 "栈底" (Stack Bottom)，向下生长
-    asm volatile("li sp, 0x20000000");
+    // 既然汇编版不需要栈，C版我们也给它一个极小的栈意思一下
+    // 0x10000040 (64 Bytes)
+    asm volatile("li sp, 0x10000040");
 
-    // 跳转主逻辑
+    // 跳转
     timer_main();
 }
