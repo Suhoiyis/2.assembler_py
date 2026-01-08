@@ -1,0 +1,179 @@
+
+timer.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00000000 <_start>:
+       	.global _start
+
+	.text
+_start:
+	/* 把 data section 从 flash 搬运到 ram 中 */
+    	la a0, _data_lma
+   0:	16800513          	li	a0,360
+    	la a1, _data_start
+   4:	10000597          	auipc	a1,0x10000
+   8:	ffc58593          	addi	a1,a1,-4 # 10000000 <_stack_start>
+    	la a2, _data_end
+   c:	10000617          	auipc	a2,0x10000
+  10:	ff460613          	addi	a2,a2,-12 # 10000000 <_stack_start>
+    	bgeu a1, a2, 2f
+  14:	00c5fc63          	bgeu	a1,a2,2c <_start+0x2c>
+1:
+    	lw t0, (a0)     /* 从 flash 中取出一个 word 的数据 */
+  18:	00052283          	lw	t0,0(a0)
+    	sw t0, (a1)     /* 将取出的数据存入 ram 中对应位置 */
+  1c:	0055a023          	sw	t0,0(a1)
+    	addi a0, a0, 4
+  20:	00450513          	addi	a0,a0,4
+    	addi a1, a1, 4
+  24:	00458593          	addi	a1,a1,4
+    	bltu a1, a2, 1b
+  28:	fec5e8e3          	bltu	a1,a2,18 <_start+0x18>
+2:
+	# Set all bytes in the BSS section to zero.
+        la      a0, _bss_start
+  2c:	10000517          	auipc	a0,0x10000
+  30:	fd450513          	addi	a0,a0,-44 # 10000000 <_stack_start>
+        la      a1, _bss_end
+  34:	10000597          	auipc	a1,0x10000
+  38:	fcc58593          	addi	a1,a1,-52 # 10000000 <_stack_start>
+        bgeu    a0, a1, 2f
+  3c:	00b57863          	bgeu	a0,a1,4c <_start+0x4c>
+1:
+        sw      zero, (a0)
+  40:	00052023          	sw	zero,0(a0)
+        addi    a0, a0, 4
+  44:	00450513          	addi	a0,a0,4
+        bltu    a0, a1, 1b
+  48:	feb56ce3          	bltu	a0,a1,40 <_start+0x40>
+2:
+    	la      sp, _stack_end    # set the initial stack pointer
+  4c:	10000117          	auipc	sp,0x10000
+  50:	03410113          	addi	sp,sp,52 # 10000080 <_stack_end>
+
+				 
+    	j   	start_kernel      # jump to kernel
+  54:	0e40006f          	j	138 <start_kernel>
+
+00000058 <timer_main>:
+#define GPIO_BASE       0x40000000
+#define SMG_BASE        ((volatile unsigned char *)(GPIO_BASE + 0x01))
+#define LED_REG         (*(volatile unsigned char *)(GPIO_BASE + 0x00))
+
+// 模仿汇编，不定义多余变量
+void timer_main() {
+  58:	fd010113          	addi	sp,sp,-48
+  5c:	02812623          	sw	s0,44(sp)
+  60:	03010413          	addi	s0,sp,48
+    LED_REG = 0xFF; // 点亮 LED
+  64:	400007b7          	lui	a5,0x40000
+  68:	fff00713          	li	a4,-1
+  6c:	00e78023          	sb	a4,0(a5) # 40000000 <_stack_end+0x2fffff80>
+
+    while (1) {
+        // 1. 读取并计算总秒数
+        // 寄存器 t0, t1 级别
+        unsigned int ticks = TIMER_COUNTER;
+  70:	200007b7          	lui	a5,0x20000
+  74:	0007a783          	lw	a5,0(a5) # 20000000 <_stack_end+0xfffff80>
+  78:	fef42623          	sw	a5,-20(s0)
+
+        unsigned int total_seconds = ticks / 1000;
+  7c:	fec42703          	lw	a4,-20(s0)
+  80:	3e800793          	li	a5,1000
+  84:	02f757b3          	divu	a5,a4,a5
+  88:	fef42423          	sw	a5,-24(s0)
+        // SMG_BASE[3] = (total_seconds / 60) % 60 % 10;
+
+        // SMG_BASE[0] = (total_seconds / 3600) % 100 / 10;
+        // SMG_BASE[1] = (total_seconds / 3600) % 100 % 10;
+
+        unsigned int seconds = total_seconds % 60;
+  8c:	fe842703          	lw	a4,-24(s0)
+  90:	03c00793          	li	a5,60
+  94:	02f777b3          	remu	a5,a4,a5
+  98:	fef42223          	sw	a5,-28(s0)
+        unsigned int minutes = (total_seconds / 60) % 60;
+  9c:	fe842703          	lw	a4,-24(s0)
+  a0:	03c00793          	li	a5,60
+  a4:	02f75733          	divu	a4,a4,a5
+  a8:	03c00793          	li	a5,60
+  ac:	02f777b3          	remu	a5,a4,a5
+  b0:	fef42023          	sw	a5,-32(s0)
+        unsigned int hours   = (total_seconds / 3600) % 100;
+  b4:	fe842703          	lw	a4,-24(s0)
+  b8:	000017b7          	lui	a5,0x1
+  bc:	e1078793          	addi	a5,a5,-496 # e10 <_data_lma+0xca8>
+  c0:	02f75733          	divu	a4,a4,a5
+  c4:	06400793          	li	a5,100
+  c8:	02f777b3          	remu	a5,a4,a5
+  cc:	fcf42e23          	sw	a5,-36(s0)
+
+
+        SMG_BASE[5] = seconds ;
+  d0:	400007b7          	lui	a5,0x40000
+  d4:	00678793          	addi	a5,a5,6 # 40000006 <_stack_end+0x2fffff86>
+  d8:	fe442703          	lw	a4,-28(s0)
+  dc:	0ff77713          	andi	a4,a4,255
+  e0:	00e78023          	sb	a4,0(a5)
+        SMG_BASE[3] = minutes ;
+  e4:	400007b7          	lui	a5,0x40000
+  e8:	00478793          	addi	a5,a5,4 # 40000004 <_stack_end+0x2fffff84>
+  ec:	fe042703          	lw	a4,-32(s0)
+  f0:	0ff77713          	andi	a4,a4,255
+  f4:	00e78023          	sb	a4,0(a5)
+        SMG_BASE[1] = hours   ;
+  f8:	400007b7          	lui	a5,0x40000
+  fc:	00278793          	addi	a5,a5,2 # 40000002 <_stack_end+0x2fffff82>
+ 100:	fdc42703          	lw	a4,-36(s0)
+ 104:	0ff77713          	andi	a4,a4,255
+ 108:	00e78023          	sb	a4,0(a5)
+
+
+
+
+        // --- LED ---
+        if ((total_seconds) & 1) { // 奇数秒
+ 10c:	fe842783          	lw	a5,-24(s0)
+ 110:	0017f793          	andi	a5,a5,1
+ 114:	00078a63          	beqz	a5,128 <timer_main+0xd0>
+            LED_REG = 0xF0;
+ 118:	400007b7          	lui	a5,0x40000
+ 11c:	ff000713          	li	a4,-16
+ 120:	00e78023          	sb	a4,0(a5) # 40000000 <_stack_end+0x2fffff80>
+ 124:	f4dff06f          	j	70 <timer_main+0x18>
+        } else {
+            LED_REG = 0x0F;
+ 128:	400007b7          	lui	a5,0x40000
+ 12c:	00f00713          	li	a4,15
+ 130:	00e78023          	sb	a4,0(a5) # 40000000 <_stack_end+0x2fffff80>
+    while (1) {
+ 134:	f3dff06f          	j	70 <timer_main+0x18>
+
+00000138 <start_kernel>:
+        }
+    }
+}
+
+// 启动入口
+void start_kernel() {
+ 138:	ff010113          	addi	sp,sp,-16
+ 13c:	00112623          	sw	ra,12(sp)
+ 140:	00812423          	sw	s0,8(sp)
+ 144:	01010413          	addi	s0,sp,16
+    // 既然汇编版不需要栈，C版我们也给它一个极小的栈意思一下
+    // 0x10000040 (64 Bytes)
+    asm volatile("li sp, 0x10000100");
+ 148:	10000137          	lui	sp,0x10000
+ 14c:	10010113          	addi	sp,sp,256 # 10000100 <_stack_end+0x80>
+
+    // 跳转
+    timer_main();
+ 150:	f09ff0ef          	jal	ra,58 <timer_main>
+ 154:	00000013          	nop
+ 158:	00c12083          	lw	ra,12(sp)
+ 15c:	00812403          	lw	s0,8(sp)
+ 160:	01010113          	addi	sp,sp,16
+ 164:	00008067          	ret

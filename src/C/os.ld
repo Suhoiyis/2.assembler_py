@@ -42,8 +42,8 @@ ENTRY( _start )
  */
 MEMORY
 {
-	flash  (wxa!ri) : ORIGIN = 0x00000000, LENGTH = 16K
-	ram   (wxa!ri) : ORIGIN = 0x10000000, LENGTH = 8K
+	flash  (wxa!ri) : ORIGIN = 0x00000000, LENGTH = 1024
+	ram   (wxa!ri) : ORIGIN = 0x10000000, LENGTH = 256
 }
 
 SECTIONS
@@ -63,13 +63,13 @@ SECTIONS
 	.lalign : {
     		. = ALIGN(4);
     		PROVIDE( _data_lma = . );
-  		} >flash AT>flash 
+  		} >flash AT>flash
 
   	.dalign : {
     		. = ALIGN(4);
     		PROVIDE( _data_start = . );
-  		} >ram AT>flash 
-	
+  		} >ram AT>flash
+
 	.rodata : {
                 PROVIDE(_rodata_start = .);
                 *(.rodata .rodata.*)
@@ -91,7 +91,7 @@ SECTIONS
                 *(.sdata .sdata.*)
                 *(.data .data.*)
 		. = ALIGN(4);
-	} >ram AT>flash 
+	} >ram AT>flash
 
 	PROVIDE(_data_end = .);
 
@@ -106,15 +106,15 @@ SECTIONS
                 *(.bss .bss.*)
                 *(COMMON)
 		. = ALIGN(4);
-        } >ram AT>flash 
+        } >ram AT>flash
 	PROVIDE(_bss_end = .);
 
 	PROVIDE(_memory_start = ORIGIN(ram));
         PROVIDE(_memory_end = ORIGIN(ram) + LENGTH(ram));
-	
+
 	/* stack */
 	PROVIDE(_stack_start = _bss_end);
-        PROVIDE(_stack_end = _stack_start + 512);
+        PROVIDE(_stack_end = _stack_start + 128);
 
 	/* heap */
 	PROVIDE(_heap_start = _stack_end);

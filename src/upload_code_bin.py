@@ -4,7 +4,7 @@ import sys
 import struct
 
 # --- 配置参数 ---
-SERIAL_PORT = "COM9"
+SERIAL_PORT = "/dev/ttyUSB0"  # 根据实际情况修改
 BAUD_RATE = 9600
 
 # 注意路径地址对应
