@@ -25,23 +25,23 @@ void timer_main() {
 
         unsigned int total_seconds = ticks / 1000;
 
-        // SMG_BASE[4] = total_seconds % 60 / 10;
-        // SMG_BASE[5] = total_seconds % 60 % 10;
+        SMG_BASE[4] = total_seconds % 60 / 10;
+        SMG_BASE[5] = total_seconds % 60 % 10;
 
-        // SMG_BASE[2] = (total_seconds / 60) % 60 / 10;
-        // SMG_BASE[3] = (total_seconds / 60) % 60 % 10;
+        SMG_BASE[2] = (total_seconds / 60) % 60 / 10;
+        SMG_BASE[3] = (total_seconds / 60) % 60 % 10;
 
-        // SMG_BASE[0] = (total_seconds / 3600) % 100 / 10;
-        // SMG_BASE[1] = (total_seconds / 3600) % 100 % 10;
+        SMG_BASE[0] = (total_seconds / 3600) % 100 / 10;
+        SMG_BASE[1] = (total_seconds / 3600) % 100 % 10;
 
-        unsigned int seconds = total_seconds % 60;
-        unsigned int minutes = (total_seconds / 60) % 60;
-        unsigned int hours   = (total_seconds / 3600) % 100;
+        // unsigned int seconds = total_seconds % 60;
+        // unsigned int minutes = (total_seconds / 60) % 60;
+        // unsigned int hours   = (total_seconds / 3600) % 100;
 
 
-        SMG_BASE[5] = seconds ;
-        SMG_BASE[3] = minutes ;
-        SMG_BASE[1] = hours   ;
+        // SMG_BASE[5] = seconds ;
+        // SMG_BASE[3] = minutes ;
+        // SMG_BASE[1] = hours   ;
 
 
 
