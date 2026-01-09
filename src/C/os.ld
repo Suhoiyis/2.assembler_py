@@ -114,7 +114,7 @@ SECTIONS
 
 	/* stack */
 	PROVIDE(_stack_start = _bss_end);
-        PROVIDE(_stack_end = _stack_start + 128);
+        PROVIDE(_stack_end = _stack_start + 28);
 
 	/* heap */
 	PROVIDE(_heap_start = _stack_end);

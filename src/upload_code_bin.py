@@ -8,7 +8,7 @@ SERIAL_PORT = "/dev/ttyUSB0"  # 根据实际情况修改
 BAUD_RATE = 9600
 
 # 注意路径地址对应
-CODE_FILE = "input.bin"
+CODE_FILE = "/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/timer_display/timer.bin"
 
 
 def load_instructions(file_path):
