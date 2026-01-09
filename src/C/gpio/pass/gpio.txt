@@ -1,0 +1,1018 @@
+
+gpio.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00000000 <_start>:
+_start():
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:7
+       	.global _start
+
+	.text
+_start:
+	/* 把 data section 从 flash 搬运到 ram 中 */
+    	la a0, _data_lma
+   0:	1ac00513          	li	x10,428
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:8
+    	la a1, _data_start
+   4:	10000597          	auipc	x11,0x10000
+   8:	ffc58593          	addi	x11,x11,-4 # 10000000 <_stack_start>
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:9
+    	la a2, _data_end
+   c:	10000617          	auipc	x12,0x10000
+  10:	ff460613          	addi	x12,x12,-12 # 10000000 <_stack_start>
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:10
+    	bgeu a1, a2, 2f
+  14:	00c5fc63          	bgeu	x11,x12,2c <_start+0x2c>
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:12
+1:
+    	lw t0, (a0)     /* 从 flash 中取出一个 word 的数据 */
+  18:	00052283          	lw	x5,0(x10)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:13
+    	sw t0, (a1)     /* 将取出的数据存入 ram 中对应位置 */
+  1c:	0055a023          	sw	x5,0(x11)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:14
+    	addi a0, a0, 4
+  20:	00450513          	addi	x10,x10,4
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:15
+    	addi a1, a1, 4
+  24:	00458593          	addi	x11,x11,4
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:16
+    	bltu a1, a2, 1b
+  28:	fec5e8e3          	bltu	x11,x12,18 <_start+0x18>
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:19
+2:
+	# Set all bytes in the BSS section to zero.
+        la      a0, _bss_start
+  2c:	10000517          	auipc	x10,0x10000
+  30:	fd450513          	addi	x10,x10,-44 # 10000000 <_stack_start>
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:20
+        la      a1, _bss_end
+  34:	10000597          	auipc	x11,0x10000
+  38:	fcc58593          	addi	x11,x11,-52 # 10000000 <_stack_start>
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:21
+        bgeu    a0, a1, 2f
+  3c:	00b57863          	bgeu	x10,x11,4c <_start+0x4c>
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:23
+1:
+        sw      zero, (a0)
+  40:	00052023          	sw	x0,0(x10)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:24
+        addi    a0, a0, 4
+  44:	00450513          	addi	x10,x10,4
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:25
+        bltu    a0, a1, 1b
+  48:	feb56ce3          	bltu	x10,x11,40 <_start+0x40>
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:27
+2:
+    	la      sp, _stack_end    # set the initial stack pointer
+  4c:	10000117          	auipc	x2,0x10000
+  50:	fd010113          	addi	x2,x2,-48 # 1000001c <_stack_end>
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:30
+
+				 
+    	j   	start_kernel      # jump to kernel
+  54:	12c0006f          	j	180 <start_kernel>
+
+00000058 <timer_main>:
+timer_main():
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:18
+#define GPIO_BASE       0x40000000
+#define SMG_PTR         ((volatile unsigned char *)(GPIO_BASE + 0x01))
+#define LED_REG         (*(volatile unsigned char *)(GPIO_BASE + 0x00))
+
+// 真正的主逻辑
+void timer_main() {
+  58:	fe010113          	addi	x2,x2,-32
+  5c:	00812e23          	sw	x8,28(x2)
+  60:	02010413          	addi	x8,x2,32
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:19
+    LED_REG = 0xFF;
+  64:	400007b7          	lui	x15,0x40000
+  68:	fff00713          	li	x14,-1
+  6c:	00e78023          	sb	x14,0(x15) # 40000000 <_stack_end+0x2fffffe4>
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:23
+
+    while (1) {
+        // 直接读取原始值
+        unsigned int ticks = TIMER_COUNTER;
+  70:	200007b7          	lui	x15,0x20000
+  74:	0007a783          	lw	x15,0(x15) # 20000000 <_stack_end+0xfffffe4>
+  78:	fef42623          	sw	x15,-20(x8)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:25
+
+        SMG_PTR[0] = (ticks / 100000) % 10;
+  7c:	fec42703          	lw	x14,-20(x8)
+  80:	000187b7          	lui	x15,0x18
+  84:	6a078793          	addi	x15,x15,1696 # 186a0 <_data_lma+0x184f4>
+  88:	02f75733          	divu	x14,x14,x15
+  8c:	00a00793          	li	x15,10
+  90:	02f77733          	remu	x14,x14,x15
+  94:	400007b7          	lui	x15,0x40000
+  98:	00178793          	addi	x15,x15,1 # 40000001 <_stack_end+0x2fffffe5>
+  9c:	0ff77713          	andi	x14,x14,255
+  a0:	00e78023          	sb	x14,0(x15)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:26
+        SMG_PTR[1] = (ticks / 10000) % 10;
+  a4:	fec42703          	lw	x14,-20(x8)
+  a8:	000027b7          	lui	x15,0x2
+  ac:	71078793          	addi	x15,x15,1808 # 2710 <_data_lma+0x2564>
+  b0:	02f75733          	divu	x14,x14,x15
+  b4:	00a00793          	li	x15,10
+  b8:	02f77733          	remu	x14,x14,x15
+  bc:	400007b7          	lui	x15,0x40000
+  c0:	00278793          	addi	x15,x15,2 # 40000002 <_stack_end+0x2fffffe6>
+  c4:	0ff77713          	andi	x14,x14,255
+  c8:	00e78023          	sb	x14,0(x15)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:27
+        SMG_PTR[2] = (ticks / 1000) % 10;
+  cc:	fec42703          	lw	x14,-20(x8)
+  d0:	3e800793          	li	x15,1000
+  d4:	02f75733          	divu	x14,x14,x15
+  d8:	00a00793          	li	x15,10
+  dc:	02f77733          	remu	x14,x14,x15
+  e0:	400007b7          	lui	x15,0x40000
+  e4:	00378793          	addi	x15,x15,3 # 40000003 <_stack_end+0x2fffffe7>
+  e8:	0ff77713          	andi	x14,x14,255
+  ec:	00e78023          	sb	x14,0(x15)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:28
+        SMG_PTR[3] = (ticks / 100) % 10;
+  f0:	fec42703          	lw	x14,-20(x8)
+  f4:	06400793          	li	x15,100
+  f8:	02f75733          	divu	x14,x14,x15
+  fc:	00a00793          	li	x15,10
+ 100:	02f77733          	remu	x14,x14,x15
+ 104:	400007b7          	lui	x15,0x40000
+ 108:	00478793          	addi	x15,x15,4 # 40000004 <_stack_end+0x2fffffe8>
+ 10c:	0ff77713          	andi	x14,x14,255
+ 110:	00e78023          	sb	x14,0(x15)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:29
+        SMG_PTR[4] = (ticks / 10) % 10;
+ 114:	fec42703          	lw	x14,-20(x8)
+ 118:	00a00793          	li	x15,10
+ 11c:	02f75733          	divu	x14,x14,x15
+ 120:	00a00793          	li	x15,10
+ 124:	02f77733          	remu	x14,x14,x15
+ 128:	400007b7          	lui	x15,0x40000
+ 12c:	00578793          	addi	x15,x15,5 # 40000005 <_stack_end+0x2fffffe9>
+ 130:	0ff77713          	andi	x14,x14,255
+ 134:	00e78023          	sb	x14,0(x15)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:30
+        SMG_PTR[5] = ticks % 10;
+ 138:	fec42703          	lw	x14,-20(x8)
+ 13c:	00a00793          	li	x15,10
+ 140:	02f77733          	remu	x14,x14,x15
+ 144:	400007b7          	lui	x15,0x40000
+ 148:	00678793          	addi	x15,x15,6 # 40000006 <_stack_end+0x2fffffea>
+ 14c:	0ff77713          	andi	x14,x14,255
+ 150:	00e78023          	sb	x14,0(x15)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:34
+
+
+        // 心跳
+        if ((ticks % 1024) < 512) {
+ 154:	fec42783          	lw	x15,-20(x8)
+ 158:	2007f793          	andi	x15,x15,512
+ 15c:	00079a63          	bnez	x15,170 <timer_main+0x118>
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:35
+            LED_REG = 0x0F;
+ 160:	400007b7          	lui	x15,0x40000
+ 164:	00f00713          	li	x14,15
+ 168:	00e78023          	sb	x14,0(x15) # 40000000 <_stack_end+0x2fffffe4>
+ 16c:	f05ff06f          	j	70 <timer_main+0x18>
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:37
+        } else {
+            LED_REG = 0xF0;
+ 170:	400007b7          	lui	x15,0x40000
+ 174:	ff000713          	li	x14,-16
+ 178:	00e78023          	sb	x14,0(x15) # 40000000 <_stack_end+0x2fffffe4>
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:21
+    while (1) {
+ 17c:	ef5ff06f          	j	70 <timer_main+0x18>
+
+00000180 <start_kernel>:
+start_kernel():
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:42
+        }
+    }
+}
+
+void start_kernel() {
+ 180:	ff010113          	addi	x2,x2,-16
+ 184:	00112623          	sw	x1,12(x2)
+ 188:	00812423          	sw	x8,8(x2)
+ 18c:	01010413          	addi	x8,x2,16
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:44
+    // 保留安全 SP
+    asm volatile("li sp, 0x10010000");
+ 190:	10010137          	lui	x2,0x10010
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:45
+    timer_main();
+ 194:	ec5ff0ef          	jal	x1,58 <timer_main>
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:46
+ 198:	00000013          	nop
+ 19c:	00c12083          	lw	x1,12(x2) # 1001000c <_stack_end+0xfff0>
+ 1a0:	00812403          	lw	x8,8(x2)
+ 1a4:	01010113          	addi	x2,x2,16
+ 1a8:	00008067          	ret
+
+Disassembly of section .debug_line:
+
+00000000 <.debug_line>:
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:7
+    	la a0, _data_lma
+   0:	0092                	slli	x1,x1,0x4
+   2:	0000                	unimp
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:8
+    	la a1, _data_start
+   4:	001e0003          	lb	x0,1(x28)
+   8:	0000                	unimp
+   a:	0101                	addi	x2,x2,0
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:9
+    	la a2, _data_end
+   c:	000d0efb          	0xd0efb
+  10:	0101                	addi	x2,x2,0
+  12:	0101                	addi	x2,x2,0
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:10
+    	bgeu a1, a2, 2f
+  14:	0000                	unimp
+  16:	0100                	addi	x8,x2,128
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:12
+    	lw t0, (a0)     /* 从 flash 中取出一个 word 的数据 */
+  18:	0000                	unimp
+  1a:	0001                	nop
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:13
+    	sw t0, (a1)     /* 将取出的数据存入 ram 中对应位置 */
+  1c:	72617473          	csrrci	x8,0x726,2
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:14
+    	addi a0, a0, 4
+  20:	2e74                	fld	f13,216(x12)
+  22:	00000053          	fadd.s	f0,f0,f0,rne
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:15
+    	addi a1, a1, 4
+  26:	0000                	unimp
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:16
+    	bltu a1, a2, 1b
+  28:	0500                	addi	x8,x2,640
+  2a:	0002                	c.slli64	x0
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:19
+        la      a0, _bss_start
+  2c:	0000                	unimp
+  2e:	1800                	addi	x8,x2,48
+  30:	04090103          	lb	x2,64(x18)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:20
+        la      a1, _bss_end
+  34:	0100                	addi	x8,x2,128
+  36:	08090103          	lb	x2,128(x18)
+  3a:	0100                	addi	x8,x2,128
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:21
+        bgeu    a0, a1, 2f
+  3c:	08090103          	lb	x2,128(x18)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:23
+        sw      zero, (a0)
+  40:	0100                	addi	x8,x2,128
+  42:	04090203          	lb	x4,64(x18)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:24
+        addi    a0, a0, 4
+  46:	0100                	addi	x8,x2,128
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:25
+        bltu    a0, a1, 1b
+  48:	04090103          	lb	x2,64(x18)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:27
+    	la      sp, _stack_end    # set the initial stack pointer
+  4c:	0100                	addi	x8,x2,128
+  4e:	04090103          	lb	x2,64(x18)
+  52:	0100                	addi	x8,x2,128
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:30
+    	j   	start_kernel      # jump to kernel
+  54:	04090103          	lb	x2,64(x18)
+timer_main():
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:18
+void timer_main() {
+  58:	0100                	addi	x8,x2,128
+  5a:	04090103          	lb	x2,64(x18)
+  5e:	0100                	addi	x8,x2,128
+  60:	04090303          	lb	x6,64(x18)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:19
+    LED_REG = 0xFF;
+  64:	0100                	addi	x8,x2,128
+  66:	08090103          	lb	x2,128(x18)
+  6a:	0100                	addi	x8,x2,128
+  6c:	08090103          	lb	x2,128(x18)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:23
+        unsigned int ticks = TIMER_COUNTER;
+  70:	0100                	addi	x8,x2,128
+  72:	04090203          	lb	x4,64(x18)
+  76:	0100                	addi	x8,x2,128
+  78:	04090103          	lb	x2,64(x18)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:25
+        SMG_PTR[0] = (ticks / 100000) % 10;
+  7c:	0100                	addi	x8,x2,128
+  7e:	04090103          	lb	x2,64(x18)
+  82:	0100                	addi	x8,x2,128
+  84:	04090203          	lb	x4,64(x18)
+  88:	0100                	addi	x8,x2,128
+  8a:	08090303          	lb	x6,128(x18)
+  8e:	0100                	addi	x8,x2,128
+  90:	0409                	addi	x8,x8,2
+  92:	0000                	unimp
+  94:	0101                	addi	x2,x2,0
+  96:	00000163          	beqz	x0,98 <timer_main+0x40>
+  9a:	001d0003          	lb	x0,1(x26)
+  9e:	0000                	unimp
+  a0:	0101                	addi	x2,x2,0
+  a2:	000d0efb          	0xd0efb
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:26
+        SMG_PTR[1] = (ticks / 10000) % 10;
+  a6:	0101                	addi	x2,x2,0
+  a8:	0101                	addi	x2,x2,0
+  aa:	0000                	unimp
+  ac:	0100                	addi	x8,x2,128
+  ae:	0000                	unimp
+  b0:	0001                	nop
+  b2:	6f697067          	0x6f697067
+  b6:	632e                	flw	f6,200(x2)
+  b8:	0000                	unimp
+  ba:	0000                	unimp
+  bc:	0500                	addi	x8,x2,640
+  be:	02050013          	addi	x0,x10,32
+  c2:	0058                	addi	x14,x2,4
+  c4:	0000                	unimp
+  c6:	05011103          	lh	x2,80(x2)
+  ca:	0305                	addi	x6,x6,1
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:27
+        SMG_PTR[2] = (ticks / 1000) % 10;
+  cc:	0901                	addi	x18,x18,0
+  ce:	000c                	0xc
+  d0:	0501                	addi	x10,x10,0
+  d2:	030d                	addi	x6,x6,3
+  d4:	0900                	addi	x8,x2,144
+  d6:	0004                	0x4
+  d8:	0501                	addi	x10,x10,0
+  da:	031e                	slli	x6,x6,0x7
+  dc:	0904                	addi	x9,x2,144
+  de:	0008                	0x8
+  e0:	0501                	addi	x10,x10,0
+  e2:	0316                	slli	x6,x6,0x5
+  e4:	0900                	addi	x8,x2,144
+  e6:	0004                	0x4
+  e8:	0501                	addi	x10,x10,0
+  ea:	031d                	addi	x6,x6,7
+  ec:	0902                	c.slli64	x18
+  ee:	0008                	0x8
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:28
+        SMG_PTR[3] = (ticks / 100) % 10;
+  f0:	0501                	addi	x10,x10,0
+  f2:	09000327          	0x9000327
+  f6:	0010                	0x10
+  f8:	0501                	addi	x10,x10,0
+  fa:	0310                	addi	x12,x2,384
+  fc:	0900                	addi	x8,x2,144
+  fe:	0008                	0x8
+ 100:	0501                	addi	x10,x10,0
+ 102:	0314                	addi	x13,x2,384
+ 104:	0900                	addi	x8,x2,144
+ 106:	0008                	0x8
+ 108:	0501                	addi	x10,x10,0
+ 10a:	031d                	addi	x6,x6,7
+ 10c:	0901                	addi	x18,x18,0
+ 10e:	0008                	0x8
+ 110:	0501                	addi	x10,x10,0
+ 112:	0326                	slli	x6,x6,0x9
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:29
+        SMG_PTR[4] = (ticks / 10) % 10;
+ 114:	0900                	addi	x8,x2,144
+ 116:	0010                	0x10
+ 118:	0501                	addi	x10,x10,0
+ 11a:	0310                	addi	x12,x2,384
+ 11c:	0900                	addi	x8,x2,144
+ 11e:	0008                	0x8
+ 120:	0501                	addi	x10,x10,0
+ 122:	0314                	addi	x13,x2,384
+ 124:	0900                	addi	x8,x2,144
+ 126:	0008                	0x8
+ 128:	0501                	addi	x10,x10,0
+ 12a:	031d                	addi	x6,x6,7
+ 12c:	0901                	addi	x18,x18,0
+ 12e:	0008                	0x8
+ 130:	0501                	addi	x10,x10,0
+ 132:	0325                	addi	x6,x6,9
+ 134:	0900                	addi	x8,x2,144
+ 136:	000c                	0xc
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:30
+        SMG_PTR[5] = ticks % 10;
+ 138:	0501                	addi	x10,x10,0
+ 13a:	0310                	addi	x12,x2,384
+ 13c:	0900                	addi	x8,x2,144
+ 13e:	0008                	0x8
+ 140:	0501                	addi	x10,x10,0
+ 142:	0314                	addi	x13,x2,384
+ 144:	0900                	addi	x8,x2,144
+ 146:	0008                	0x8
+ 148:	0501                	addi	x10,x10,0
+ 14a:	031d                	addi	x6,x6,7
+ 14c:	0901                	addi	x18,x18,0
+ 14e:	0008                	0x8
+ 150:	0501                	addi	x10,x10,0
+ 152:	0324                	addi	x9,x2,392
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:34
+        if ((ticks % 1024) < 512) {
+ 154:	0900                	addi	x8,x2,144
+ 156:	000c                	0xc
+ 158:	0501                	addi	x10,x10,0
+ 15a:	0310                	addi	x12,x2,384
+ 15c:	0900                	addi	x8,x2,144
+ 15e:	0008                	0x8
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:35
+            LED_REG = 0x0F;
+ 160:	0501                	addi	x10,x10,0
+ 162:	0314                	addi	x13,x2,384
+ 164:	0900                	addi	x8,x2,144
+ 166:	0008                	0x8
+ 168:	0501                	addi	x10,x10,0
+ 16a:	031d                	addi	x6,x6,7
+ 16c:	0901                	addi	x18,x18,0
+ 16e:	0008                	0x8
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:37
+            LED_REG = 0xF0;
+ 170:	0501                	addi	x10,x10,0
+ 172:	09000323          	sb	x16,134(x0) # 86 <timer_main+0x2e>
+ 176:	000c                	0xc
+ 178:	0501                	addi	x10,x10,0
+ 17a:	0310                	addi	x12,x2,384
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:21
+    while (1) {
+ 17c:	0900                	addi	x8,x2,144
+ 17e:	0008                	0x8
+start_kernel():
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:42
+void start_kernel() {
+ 180:	0501                	addi	x10,x10,0
+ 182:	0314                	addi	x13,x2,384
+ 184:	0900                	addi	x8,x2,144
+ 186:	0008                	0x8
+ 188:	0501                	addi	x10,x10,0
+ 18a:	031c                	addi	x15,x2,384
+ 18c:	0901                	addi	x18,x18,0
+ 18e:	0008                	0x8
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:44
+    asm volatile("li sp, 0x10010000");
+ 190:	0501                	addi	x10,x10,0
+ 192:	0310                	addi	x12,x2,384
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:45
+    timer_main();
+ 194:	0900                	addi	x8,x2,144
+ 196:	000c                	0xc
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:46
+ 198:	0501                	addi	x10,x10,0
+ 19a:	0314                	addi	x13,x2,384
+ 19c:	0900                	addi	x8,x2,144
+ 19e:	0008                	0x8
+ 1a0:	0501                	addi	x10,x10,0
+ 1a2:	031c                	addi	x15,x2,384
+ 1a4:	0904                	addi	x9,x2,144
+ 1a6:	0008                	0x8
+ 1a8:	0501                	addi	x10,x10,0
+ 1aa:	030c                	addi	x11,x2,384
+ 1ac:	0900                	addi	x8,x2,144
+ 1ae:	0008                	0x8
+ 1b0:	0501                	addi	x10,x10,0
+ 1b2:	030d                	addi	x6,x6,3
+ 1b4:	0901                	addi	x18,x18,0
+ 1b6:	0004                	0x4
+ 1b8:	0501                	addi	x10,x10,0
+ 1ba:	0315                	addi	x6,x6,5
+ 1bc:	0900                	addi	x8,x2,144
+ 1be:	0004                	0x4
+ 1c0:	0501                	addi	x10,x10,0
+ 1c2:	030d                	addi	x6,x6,3
+ 1c4:	0902                	c.slli64	x18
+ 1c6:	000c                	0xc
+ 1c8:	0501                	addi	x10,x10,0
+ 1ca:	0315                	addi	x6,x6,5
+ 1cc:	0900                	addi	x8,x2,144
+ 1ce:	0004                	0x4
+ 1d0:	0501                	addi	x10,x10,0
+ 1d2:	0970030f          	0x970030f
+ 1d6:	0008                	0x8
+ 1d8:	0501                	addi	x10,x10,0
+ 1da:	0315                	addi	x6,x6,5
+ 1dc:	0915                	addi	x18,x18,5
+ 1de:	0004                	0x4
+ 1e0:	0501                	addi	x10,x10,0
+ 1e2:	0305                	addi	x6,x6,1
+ 1e4:	0902                	c.slli64	x18
+ 1e6:	0010                	0x10
+ 1e8:	0301                	addi	x6,x6,0
+ 1ea:	0901                	addi	x18,x18,0
+ 1ec:	0004                	0x4
+ 1ee:	0501                	addi	x10,x10,0
+ 1f0:	0301                	addi	x6,x6,0
+ 1f2:	0901                	addi	x18,x18,0
+ 1f4:	0004                	0x4
+ 1f6:	0901                	addi	x18,x18,0
+ 1f8:	0014                	0x14
+ 1fa:	0100                	addi	x8,x2,128
+ 1fc:	01              	Address 0x00000000000001fc is out of bounds.
+
+
+Disassembly of section .debug_info:
+
+00000000 <.debug_info>:
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:7
+    	la a0, _data_lma
+   0:	0022                	c.slli	x0,0x8
+   2:	0000                	unimp
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:8
+    	la a1, _data_start
+   4:	0002                	c.slli64	x0
+   6:	0000                	unimp
+   8:	0000                	unimp
+   a:	0104                	addi	x9,x2,128
+	...
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:10
+    	bgeu a1, a2, 2f
+  14:	0058                	addi	x14,x2,4
+  16:	0000                	unimp
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:12
+    	lw t0, (a0)     /* 从 flash 中取出一个 word 的数据 */
+  18:	0000                	unimp
+  1a:	0000                	unimp
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:13
+    	sw t0, (a1)     /* 将取出的数据存入 ram 中对应位置 */
+  1c:	0008                	0x8
+  1e:	0000                	unimp
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:14
+    	addi a0, a0, 4
+  20:	0051                	c.nop	20
+  22:	0000                	unimp
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:15
+    	addi a1, a1, 4
+  24:	8001                	c.srli64	x8
+  26:	0000006b          	0x6b
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:16
+    	bltu a1, a2, 1b
+  2a:	0004                	0x4
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:19
+        la      a0, _bss_start
+  2c:	0014                	0x14
+  2e:	0000                	unimp
+  30:	0104                	addi	x9,x2,128
+  32:	0000008f          	0x8f
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:20
+        la      a1, _bss_end
+  36:	5d0c                	lw	x11,56(x10)
+  38:	0000                	unimp
+  3a:	0800                	addi	x8,x2,16
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:21
+        bgeu    a0, a1, 2f
+  3c:	0000                	unimp
+  3e:	5800                	lw	x8,48(x8)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:23
+        sw      zero, (a0)
+  40:	0000                	unimp
+  42:	5400                	lw	x8,40(x8)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:24
+        addi    a0, a0, 4
+  44:	0001                	nop
+  46:	9600                	0x9600
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:25
+        bltu    a0, a1, 1b
+  48:	0000                	unimp
+  4a:	0200                	addi	x8,x2,256
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:27
+    	la      sp, _stack_end    # set the initial stack pointer
+  4c:	007c                	addi	x15,x2,12
+  4e:	0000                	unimp
+  50:	2a01                	jal	160 <timer_main+0x108>
+  52:	8006                	c.mv	x0,x1
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:30
+    	j   	start_kernel      # jump to kernel
+  54:	0001                	nop
+  56:	2c00                	fld	f8,24(x8)
+timer_main():
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:18
+void timer_main() {
+  58:	0000                	unimp
+  5a:	0100                	addi	x8,x2,128
+  5c:	039c                	addi	x15,x2,448
+  5e:	0071                	c.nop	28
+  60:	0000                	unimp
+  62:	1201                	addi	x4,x4,-32
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:19
+    LED_REG = 0xFF;
+  64:	5806                	lw	x16,96(x2)
+  66:	0000                	unimp
+  68:	2800                	fld	f8,16(x8)
+  6a:	0001                	nop
+  6c:	0100                	addi	x8,x2,128
+  6e:	679c                	flw	f15,8(x15)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:23
+        unsigned int ticks = TIMER_COUNTER;
+  70:	0000                	unimp
+  72:	0400                	addi	x8,x2,512
+  74:	0070                	addi	x12,x2,12
+  76:	0000                	unimp
+  78:	010c                	addi	x11,x2,128
+  7a:	0000                	unimp
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:25
+        SMG_PTR[0] = (ticks / 100000) % 10;
+  7c:	8905                	andi	x10,x10,1
+  7e:	0000                	unimp
+  80:	0100                	addi	x8,x2,128
+  82:	00671617          	auipc	x12,0x671
+  86:	0000                	unimp
+  88:	9102                	jalr	x2
+  8a:	006c                	addi	x11,x2,12
+  8c:	0600                	addi	x8,x2,768
+  8e:	0704                	addi	x9,x2,896
+  90:	0064                	addi	x9,x2,12
+  92:	0000                	unimp
+	...
+
+Disassembly of section .debug_abbrev:
+
+00000000 <.debug_abbrev>:
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:7
+    	la a0, _data_lma
+   0:	1101                	addi	x2,x2,-32
+   2:	1000                	addi	x8,x2,32
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:8
+    	la a1, _data_start
+   4:	1106                	slli	x2,x2,0x21
+   6:	1201                	addi	x4,x4,-32
+   8:	0301                	addi	x6,x6,0
+   a:	1b0e                	slli	x22,x22,0x23
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:9
+    	la a2, _data_end
+   c:	250e                	fld	f10,192(x2)
+   e:	130e                	slli	x6,x6,0x23
+  10:	0005                	c.nop	1
+  12:	0000                	unimp
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:10
+    	bgeu a1, a2, 2f
+  14:	1101                	addi	x2,x2,-32
+  16:	2501                	jal	616 <_data_lma+0x46a>
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:12
+    	lw t0, (a0)     /* 从 flash 中取出一个 word 的数据 */
+  18:	130e                	slli	x6,x6,0x23
+  1a:	1b0e030b          	0x1b0e030b
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:13
+    	sw t0, (a1)     /* 将取出的数据存入 ram 中对应位置 */
+  1e:	110e                	slli	x2,x2,0x23
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:14
+    	addi a0, a0, 4
+  20:	1201                	addi	x4,x4,-32
+  22:	1006                	c.slli	x0,0x21
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:15
+    	addi a1, a1, 4
+  24:	02000017          	auipc	x0,0x2000
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:16
+    	bltu a1, a2, 1b
+  28:	002e                	c.slli	x0,0xb
+  2a:	0e03193f 0b3b0b3a 	0xb3b0b3a0e03193f
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:19
+        la      a0, _bss_start
+  32:	0b39                	addi	x22,x22,14
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:20
+        la      a1, _bss_end
+  34:	0111                	addi	x2,x2,4
+  36:	0612                	slli	x12,x12,0x4
+  38:	1840                	addi	x8,x2,52
+  3a:	4296                	lw	x5,68(x2)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:21
+        bgeu    a0, a1, 2f
+  3c:	0019                	c.nop	6
+  3e:	0300                	addi	x8,x2,384
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:23
+        sw      zero, (a0)
+  40:	012e                	slli	x2,x2,0xb
+  42:	0e03193f 0b3b0b3a 	0xb3b0b3a0e03193f
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:25
+        bltu    a0, a1, 1b
+  4a:	0b39                	addi	x22,x22,14
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:27
+    	la      sp, _stack_end    # set the initial stack pointer
+  4c:	0111                	addi	x2,x2,4
+  4e:	0612                	slli	x12,x12,0x4
+  50:	1840                	addi	x8,x2,52
+  52:	01194297          	auipc	x5,0x1194
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:30
+    	j   	start_kernel      # jump to kernel
+  56:	04000013          	li	x0,64
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:18
+void timer_main() {
+  5a:	0111010b          	0x111010b
+  5e:	0612                	slli	x12,x12,0x4
+  60:	0000                	unimp
+  62:	3405                	jal	fffffa82 <_stack_end+0xeffffa66>
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:19
+    LED_REG = 0xFF;
+  64:	0300                	addi	x8,x2,384
+  66:	3a0e                	fld	f20,224(x2)
+  68:	390b3b0b          	0x390b3b0b
+  6c:	0213490b          	0x213490b
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:23
+        unsigned int ticks = TIMER_COUNTER;
+  70:	0018                	0x18
+  72:	0600                	addi	x8,x2,768
+  74:	0024                	addi	x9,x2,8
+  76:	0b3e0b0b          	0xb3e0b0b
+  7a:	00000e03          	lb	x28,0(x0) # 0 <_start>
+	...
+
+Disassembly of section .debug_aranges:
+
+00000000 <.debug_aranges>:
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:7
+    	la a0, _data_lma
+   0:	001c                	0x1c
+   2:	0000                	unimp
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:8
+    	la a1, _data_start
+   4:	0002                	c.slli64	x0
+   6:	0000                	unimp
+   8:	0000                	unimp
+   a:	0004                	0x4
+	...
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:10
+    	bgeu a1, a2, 2f
+  14:	0058                	addi	x14,x2,4
+	...
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:13
+    	sw t0, (a1)     /* 将取出的数据存入 ram 中对应位置 */
+  1e:	0000                	unimp
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:14
+    	addi a0, a0, 4
+  20:	001c                	0x1c
+  22:	0000                	unimp
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:15
+    	addi a1, a1, 4
+  24:	0002                	c.slli64	x0
+  26:	0026                	c.slli	x0,0x9
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:16
+    	bltu a1, a2, 1b
+  28:	0000                	unimp
+  2a:	0004                	0x4
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:19
+        la      a0, _bss_start
+  2c:	0000                	unimp
+  2e:	0000                	unimp
+  30:	0058                	addi	x14,x2,4
+  32:	0000                	unimp
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:20
+        la      a1, _bss_end
+  34:	0154                	addi	x13,x2,132
+	...
+
+Disassembly of section .debug_str:
+
+00000000 <.debug_str>:
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:7
+    	la a0, _data_lma
+   0:	72617473          	csrrci	x8,0x726,2
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:8
+    	la a1, _data_start
+   4:	2e74                	fld	f13,216(x12)
+   6:	722f0053          	0x722f0053
+   a:	6e75                	lui	x28,0x1d
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:9
+    	la a2, _data_end
+   c:	64656d2f          	0x64656d2f
+  10:	6169                	addi	x2,x2,208
+  12:	6175792f          	0x6175792f
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:10
+    	bgeu a1, a2, 2f
+  16:	6e69572f          	0x6e69572f
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:12
+    	lw t0, (a0)     /* 从 flash 中取出一个 word 的数据 */
+  1a:	6f64                	flw	f9,92(x14)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:13
+    	sw t0, (a1)     /* 将取出的数据存入 ram 中对应位置 */
+  1c:	2f447377          	0x2f447377
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:14
+    	addi a0, a0, 4
+  20:	4555                	li	x10,21
+  22:	2f435453          	0x2f435453
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:15
+    	addi a1, a1, 4
+  26:	2f312e33          	0x2f312e33
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:16
+    	bltu a1, a2, 1b
+  2a:	6f7a                	flw	f30,156(x2)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:19
+        la      a0, _bss_start
+  2c:	676e                	flw	f14,216(x2)
+  2e:	2f656873          	csrrsi	x16,0x2f6,10
+  32:	2e32                	fld	f28,264(x2)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:20
+        la      a1, _bss_end
+  34:	7361                	lui	x6,0xffff8
+  36:	626d6573          	csrrsi	x10,0x626,26
+  3a:	656c                	flw	f11,76(x10)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:21
+        bgeu    a0, a1, 2f
+  3c:	5f72                	lw	x30,60(x2)
+  3e:	7970                	flw	f12,116(x10)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:23
+        sw      zero, (a0)
+  40:	6372732f          	0x6372732f
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:24
+        addi    a0, a0, 4
+  44:	672f432f          	0x672f432f
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:25
+        bltu    a0, a1, 1b
+  48:	6970                	flw	f12,84(x10)
+  4a:	61702f6f          	jal	x30,2e60 <_data_lma+0x2cb4>
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:27
+    	la      sp, _stack_end    # set the initial stack pointer
+  4e:	47007373          	csrrci	x6,0x470,0
+  52:	554e                	lw	x10,240(x2)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:30
+    	j   	start_kernel      # jump to kernel
+  54:	4120                	lw	x8,64(x10)
+  56:	2e322053          	0x2e322053
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:18
+void timer_main() {
+  5a:	67003233          	0x67003233
+  5e:	6970                	flw	f12,84(x10)
+  60:	00632e6f          	jal	x28,32066 <_data_lma+0x31eba>
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:19
+    LED_REG = 0xFF;
+  64:	6e75                	lui	x28,0x1d
+  66:	6e676973          	csrrsi	x18,0x6e6,14
+  6a:	6465                	lui	x8,0x19
+  6c:	6920                	flw	f8,80(x10)
+  6e:	746e                	flw	f8,248(x2)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:23
+        unsigned int ticks = TIMER_COUNTER;
+  70:	7400                	flw	f8,40(x8)
+  72:	6d69                	lui	x26,0x1a
+  74:	7265                	lui	x4,0xffff9
+  76:	6d5f 6961 006e      	0x6e69616d5f
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:25
+        SMG_PTR[0] = (ticks / 100000) % 10;
+  7c:	72617473          	csrrci	x8,0x726,2
+  80:	5f74                	lw	x13,124(x14)
+  82:	6e72656b          	0x6e72656b
+  86:	6c65                	lui	x24,0x19
+  88:	7400                	flw	f8,40(x8)
+  8a:	6369                	lui	x6,0x1a
+  8c:	4700736b          	0x4700736b
+  90:	554e                	lw	x10,240(x2)
+  92:	4320                	lw	x8,64(x14)
+  94:	3731                	jal	ffffffa0 <_stack_end+0xefffff84>
+  96:	3820                	fld	f8,112(x8)
+  98:	322e                	fld	f4,232(x2)
+  9a:	302e                	fld	f0,232(x2)
+  9c:	2d20                	fld	f8,88(x10)
+  9e:	616d                	addi	x2,x2,240
+  a0:	6372                	flw	f6,28(x2)
+  a2:	3d68                	fld	f10,248(x10)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/gpio.c:26
+        SMG_PTR[1] = (ticks / 10000) % 10;
+  a4:	7672                	flw	f12,60(x2)
+  a6:	6d693233          	0x6d693233
+  aa:	2d20                	fld	f8,88(x10)
+  ac:	616d                	addi	x2,x2,240
+  ae:	6962                	flw	f18,24(x2)
+  b0:	693d                	lui	x18,0xf
+  b2:	706c                	flw	f11,100(x8)
+  b4:	2d203233          	0x2d203233
+  b8:	4f2d2067          	0x4f2d2067
+  bc:	2030                	fld	f12,64(x8)
+  be:	662d                	lui	x12,0xb
+  c0:	6f6e                	flw	f30,216(x2)
+  c2:	622d                	lui	x4,0xb
+  c4:	6975                	lui	x18,0x1d
+  c6:	746c                	flw	f11,108(x8)
+  c8:	6e69                	lui	x28,0x1a
+	...
+
+Disassembly of section .comment:
+
+00000000 <.comment>:
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:7
+    	la a0, _data_lma
+   0:	3a434347          	fmsub.d	f6,f6,f4,f7,rmm
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:8
+    	la a1, _data_start
+   4:	2820                	fld	f8,80(x8)
+   6:	20554e47          	fmsub.s	f28,f10,f5,f4,rmm
+   a:	434d                	li	x6,19
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:9
+    	la a2, _data_end
+   c:	2055                	jal	b0 <timer_main+0x58>
+   e:	6345                	lui	x6,0x11
+  10:	696c                	flw	f11,84(x10)
+  12:	7370                	flw	f12,100(x14)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:10
+    	bgeu a1, a2, 2f
+  14:	2065                	jal	bc <timer_main+0x64>
+  16:	4952                	lw	x18,20(x2)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:12
+    	lw t0, (a0)     /* 从 flash 中取出一个 word 的数据 */
+  18:	562d4353          	0x562d4353
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:13
+    	sw t0, (a1)     /* 将取出的数据存入 ram 中对应位置 */
+  1c:	4520                	lw	x8,72(x10)
+  1e:	626d                	lui	x4,0x1b
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:14
+    	addi a0, a0, 4
+  20:	6465                	lui	x8,0x19
+  22:	6564                	flw	f9,76(x10)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:15
+    	addi a1, a1, 4
+  24:	2064                	fld	f9,192(x8)
+  26:	2c434347          	0x2c434347
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:16
+    	bltu a1, a2, 1b
+  2a:	3620                	fld	f8,104(x12)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:19
+        la      a0, _bss_start
+  2c:	2d34                	fld	f13,88(x10)
+  2e:	6962                	flw	f18,24(x2)
+  30:	2974                	fld	f13,208(x10)
+  32:	3820                	fld	f8,112(x8)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:20
+        la      a1, _bss_end
+  34:	322e                	fld	f4,232(x2)
+  36:	302e                	fld	f0,232(x2)
+	...
+
+Disassembly of section .debug_frame:
+
+00000000 <.debug_frame>:
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:7
+    	la a0, _data_lma
+   0:	000c                	0xc
+   2:	0000                	unimp
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:8
+    	la a1, _data_start
+   4:	ffff                	0xffff
+   6:	ffff                	0xffff
+   8:	0001                	nop
+   a:	7c01                	lui	x24,0xfffe0
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:9
+    	la a2, _data_end
+   c:	0d01                	addi	x26,x26,0
+   e:	0002                	c.slli64	x0
+  10:	0018                	0x18
+  12:	0000                	unimp
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:10
+    	bgeu a1, a2, 2f
+  14:	0000                	unimp
+  16:	0000                	unimp
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:12
+    	lw t0, (a0)     /* 从 flash 中取出一个 word 的数据 */
+  18:	0058                	addi	x14,x2,4
+  1a:	0000                	unimp
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:13
+    	sw t0, (a1)     /* 将取出的数据存入 ram 中对应位置 */
+  1c:	0128                	addi	x10,x2,136
+  1e:	0000                	unimp
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:14
+    	addi a0, a0, 4
+  20:	0e44                	addi	x9,x2,788
+  22:	4420                	lw	x8,72(x8)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:15
+    	addi a1, a1, 4
+  24:	0188                	addi	x10,x2,192
+  26:	0c44                	addi	x9,x2,532
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:16
+    	bltu a1, a2, 1b
+  28:	0008                	0x8
+  2a:	0000                	unimp
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:19
+        la      a0, _bss_start
+  2c:	0020                	addi	x8,x2,8
+  2e:	0000                	unimp
+  30:	0000                	unimp
+  32:	0000                	unimp
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:20
+        la      a1, _bss_end
+  34:	0180                	addi	x8,x2,192
+  36:	0000                	unimp
+  38:	002c                	addi	x11,x2,8
+  3a:	0000                	unimp
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:21
+        bgeu    a0, a1, 2f
+  3c:	0e44                	addi	x9,x2,788
+  3e:	4810                	lw	x12,16(x8)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:23
+        sw      zero, (a0)
+  40:	0181                	addi	x3,x3,0
+  42:	0288                	addi	x10,x2,320
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:24
+        addi    a0, a0, 4
+  44:	0c44                	addi	x9,x2,532
+  46:	0008                	0x8
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:25
+        bltu    a0, a1, 1b
+  48:	c150                	sw	x12,4(x10)
+  4a:	c844                	sw	x9,20(x8)
+/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/gpio/pass/start.S:27
+    	la      sp, _stack_end    # set the initial stack pointer
+  4c:	0d44                	addi	x9,x2,660
+  4e:	0002                	c.slli64	x0
