@@ -3,9 +3,9 @@ import time
 import sys
 
 # --- 配置参数 ---
-SERIAL_PORT = "COM9"  # 您的串口号
+SERIAL_PORT = "COM6"  # 您的串口号
 BAUD_RATE = 9600  # 波特率
-CODE_FILE = "D:/learn/RISC32-SC/RISC32-SC/assembler/data/output.txt"  # 机器码文件名
+CODE_FILE = "D"  # 机器码文件名
 # 注意：请确保上面的 CODE_FILE 路径是正确的，
 # 或者将 output.txt 文件放在与此Python脚本相同的目录中，并将 CODE_FILE 改为 "output.txt"
 

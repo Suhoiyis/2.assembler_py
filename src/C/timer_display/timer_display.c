@@ -14,6 +14,9 @@
 #define SMG_BASE        ((volatile unsigned char *)(GPIO_BASE + 0x01))
 #define LED_REG         (*(volatile unsigned char *)(GPIO_BASE + 0x00))
 
+
+// unsigned int total_seconds;
+
 // 模仿汇编，不定义多余变量
 void timer_main() {
     LED_REG = 0xFF; // 点亮 LED
@@ -23,7 +26,7 @@ void timer_main() {
         // 寄存器 t0, t1 级别
         unsigned int ticks = TIMER_COUNTER;
 
-        // unsigned int total_seconds = ticks / 1000;
+        unsigned int total_seconds = ticks / 1000;
 
         SMG_BASE[4] = ((ticks/1000) % 60) / 10;
         SMG_BASE[5] = ((ticks/1000) % 60) % 10;
@@ -53,6 +56,6 @@ void timer_main() {
 
 void start_kernel() {
     // 保留安全 SP
-    asm volatile("li sp, 0x10000100");
+    // asm volatile("li sp, 0x10000100");
     timer_main();
 }

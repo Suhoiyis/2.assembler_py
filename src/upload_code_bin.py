@@ -8,7 +8,8 @@ SERIAL_PORT = "/dev/ttyUSB0"  # 根据实际情况修改
 BAUD_RATE = 9600
 
 # 注意路径地址对应
-CODE_FILE = "/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/timer_display/timer.bin"
+# CODE_FILE = "/run/media/yua/WindowsD/UESTC/3.1/zongshe/2.assembler_py/src/C/rx_and_print/rx.bin"
+CODE_FILE = "/home/yua/Documents/xwechat_files/wxid_ef16da52vn3122_3a47/msg/file/2026-01/rx_print.bin"
 
 
 def load_instructions(file_path):
