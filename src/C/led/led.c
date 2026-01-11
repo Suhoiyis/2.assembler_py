@@ -8,9 +8,10 @@
  * 通过执行一个空循环来消耗 CPU 时间
  * 循环的次数 "count" 需要根据实际硬件速度来调整
  */
-void simple_delay(long long count) {
-    volatile long long i;
-    for (i = 0; i < count; i++);
+void simple_delay(volatile unsigned int count) {
+    while (count--) {
+        // 空循环
+    }
 }
 
 /*
@@ -19,7 +20,7 @@ void simple_delay(long long count) {
  */
 void start_kernel() {
     // 延迟时间
-    const long long DELAY_COUNT = 100000;
+    const long long DELAY_COUNT = 0x500000;
 
     // 无限循环
     while (1) {
